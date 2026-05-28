@@ -6,16 +6,42 @@ import config
 from core.face_tracker import FaceTracker
 from core.canvas_manager import CanvasManager
 
+def initialize_camera():
+    """
+    利用可能なカメラを自動で探索して起動する。
+    iPhoneの連携カメラ(Mac)や仮想カメラ(Windows)など、外部カメラを優先的に探す。
+    """
+    print("カメラを探索しています...")
+    # 探すカメラ番号の順番。
+    # 一般的に 1 や 2 が外部カメラ（iPhone）、0 が内蔵カメラ。外部カメラを優先する。
+    camera_indices = [1, 2, 0] 
+    
+    for index in camera_indices:
+        cap = cv2.VideoCapture(index)
+        if cap.isOpened():
+            # カメラが開けた場合、試しに1フレーム読み込んでみる
+            ret, _ = cap.read()
+            if ret:
+                print(f"✅ カメラ(番号: {index})の接続に成功しました！")
+                return cap
+            else:
+                cap.release()
+                
+    # どの番号でもカメラが見つからなかった場合
+    print("❌ 利用可能なカメラが見つかりません。")
+    print("PCにカメラが接続されているか、またはiPhoneの連携アプリが起動しているか確認してください。")
+    sys.exit()
+
 def main():
     # 1. 初期化
     pygame.init()
-    cap = cv2.VideoCapture(0)
+    
+    # 修正: カメラの初期化を、新しく作った自動探索関数に任せる
+    cap = initialize_camera()
+    
     ret, frame = cap.read()
-    if not ret:
-        print("カメラが見つかりません。")
-        sys.exit()
-
     h, w, _ = frame.shape
+    
     screen = pygame.display.set_mode((w, h))
     pygame.display.set_caption('Flower Nose - AR Experience')
     clock = pygame.time.Clock()
@@ -30,6 +56,7 @@ def main():
     while cap.isOpened():
         success, image = cap.read()
         if not success:
+            print("カメラからの映像が途絶えました。")
             break
 
         # --- イベント処理 ---
