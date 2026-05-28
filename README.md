@@ -6,6 +6,8 @@ git clone https://github.com/AiriNakanishi/FlowerNose.git
 cd FlowerNose
 ```
 
+### ↓Mac用
+
 #### 2. 仮想環境のセットアップ
 ```
 python3 -m venv venv
