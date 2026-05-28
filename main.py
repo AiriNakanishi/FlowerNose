@@ -1,122 +1,71 @@
+# main.py
 import cv2
-import mediapipe as mp
 import pygame
 import sys
-import os
-from datetime import datetime
+import config
+from core.face_tracker import FaceTracker
+from core.canvas_manager import CanvasManager
 
-# ============================================
-# 1. 保存先フォルダの準備 (新規追加)
-# ============================================
-SAVE_DIR = "FlowerNose_Gallery"
-if not os.path.exists(SAVE_DIR):
-    os.makedirs(SAVE_DIR)
-    print(f"保存先フォルダ '{SAVE_DIR}' を作成しました。")
+def main():
+    # 1. 初期化
+    pygame.init()
+    cap = cv2.VideoCapture(0)
+    ret, frame = cap.read()
+    if not ret:
+        print("カメラが見つかりません。")
+        sys.exit()
 
-# ============================================
-# 2. MediaPipeの準備
-# ============================================
-BaseOptions = mp.tasks.BaseOptions
-FaceLandmarker = mp.tasks.vision.FaceLandmarker
-FaceLandmarkerOptions = mp.tasks.vision.FaceLandmarkerOptions
-VisionRunningMode = mp.tasks.vision.RunningMode
+    h, w, _ = frame.shape
+    screen = pygame.display.set_mode((w, h))
+    pygame.display.set_caption('Flower Nose - AR Experience')
+    clock = pygame.time.Clock()
 
-options = FaceLandmarkerOptions(
-    base_options=BaseOptions(model_asset_path='face_landmarker.task'),
-    running_mode=VisionRunningMode.IMAGE,
-    num_faces=1)
+    # モジュール（部品）の準備
+    tracker = FaceTracker()
+    canvas = CanvasManager(w, h)
+    
+    prev_nose_pos = None
 
-# ============================================
-# 3. カメラとPygameの初期化
-# ============================================
-pygame.init()
-
-cap = cv2.VideoCapture(0)
-ret, frame = cap.read()
-if not ret:
-    print("カメラが見つかりません。")
-    sys.exit()
-
-h, w, _ = frame.shape
-CANVAS_WIDTH = w
-CANVAS_HEIGHT = h
-
-screen = pygame.display.set_mode((CANVAS_WIDTH, CANVAS_HEIGHT))
-pygame.display.set_caption('Flower Nose - AR Experience')
-
-# 線を描き続けるための「透明なシート」
-drawing_surface = pygame.Surface((CANVAS_WIDTH, CANVAS_HEIGHT), pygame.SRCALPHA)
-drawing_surface.fill((0, 0, 0, 0))
-
-PEN_COLOR = (255, 100, 150)
-PEN_THICKNESS = 8
-prev_nose_pos = None
-
-clock = pygame.time.Clock()
-
-# ============================================
-# 4. メインループ
-# ============================================
-with FaceLandmarker.create_from_options(options) as landmarker:
+    # 2. メインループ
     while cap.isOpened():
         success, image = cap.read()
         if not success:
             break
 
-        # --- イベント処理（キーボード入力など） ---
+        # --- イベント処理 ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 cap.release()
                 pygame.quit()
                 sys.exit()
-                
-            # キーボードのキーが押された時の処理 (新規追加)
             if event.type == pygame.KEYDOWN:
-                # Enterキー（Returnキー）が押されたら保存する
                 if event.key == pygame.K_RETURN:
-                    # 今の時刻をファイル名にする（例: 20260528_102030.png）
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    filename = f"flower_{timestamp}.png"
-                    filepath = os.path.join(SAVE_DIR, filename)
-                    
-                    # 透明なシート（drawing_surface）だけを保存
-                    pygame.image.save(drawing_surface, filepath)
-                    print(f"🎉 絵を保存しました: {filepath}")
-                    
-                    # 保存後、キャンバスをリセット（透明に塗りつぶす）して次のお客さんへ
-                    drawing_surface.fill((0, 0, 0, 0))
+                    canvas.save_image() # Enterで保存
 
+        # --- 画像の準備 ---
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
         frame_surface = pygame.surfarray.make_surface(image_rgb.swapaxes(0, 1))
 
-        mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=image_rgb)
-        detection_result = landmarker.detect(mp_image)
+        # --- 顔認識と描画の連携 ---
+        current_nose_pos = tracker.get_nose_position(image_rgb, w, h)
 
-        if detection_result.face_landmarks:
-            nose_tip = detection_result.face_landmarks[0][4]
-            cx, cy = int(nose_tip.x * w), int(nose_tip.y * h)
-            current_nose_pos = (cx, cy)
-
+        if current_nose_pos:
+            # 鼻が動いていれば線を引く
             if prev_nose_pos is not None:
-                pygame.draw.line(drawing_surface, PEN_COLOR, prev_nose_pos, current_nose_pos, PEN_THICKNESS)
-            
+                canvas.draw_line(prev_nose_pos, current_nose_pos)
             prev_nose_pos = current_nose_pos
         else:
             prev_nose_pos = None
 
         # --- 画面の合成 ---
-        screen.blit(frame_surface, (0, 0))
-        
+        screen.blit(frame_surface, (0, 0)) # カメラ映像
         if prev_nose_pos:
-            pygame.draw.circle(screen, (255, 0, 0), prev_nose_pos, 10)
-
-        screen.blit(drawing_surface, (0, 0))
+            pygame.draw.circle(screen, config.Colors.GUIDE_RED, prev_nose_pos, 10) # ガイド
+        screen.blit(canvas.get_surface(), (0, 0)) # 線画シート
 
         pygame.display.flip()
-        clock.tick(30)
+        clock.tick(config.Sizes.FPS)
 
-cap.release()
-pygame.quit()
-print("プログラムを終了しました。")
+if __name__ == "__main__":
+    main()
