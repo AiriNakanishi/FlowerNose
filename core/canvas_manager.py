@@ -8,6 +8,8 @@ class CanvasManager:
     def __init__(self, width, height):
         self.width = width
         self.height = height
+        # 鼻で描いた線だけを載せる透明レイヤー。
+        # カメラ映像は main.py 側で別に描くので、ここには背景を塗らない。
         self.drawing_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         self.clear_canvas()
         
@@ -64,12 +66,15 @@ class CanvasManager:
                 pygame.draw.rect(screen, config.Colors.BLACK, (x, start_y, box_size, box_size), 1)
 
     def clear_canvas(self):
+        # 透明で塗り直すことで、次の絵にも白背景を残さない。
         self.drawing_surface.fill(config.Colors.TRANSPARENT)
 
     def save_image(self):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"flower_{timestamp}.png"
         filepath = os.path.join(config.System.SAVE_DIR, filename)
+        # カメラ映像ではなく drawing_surface だけを保存する。
+        # そのため、描いていない部分はPNGの透明ピクセルとして残る。
         pygame.image.save(self.drawing_surface, filepath)
         print(f"🎉 絵を保存しました: {filepath}")
         self.clear_canvas()
