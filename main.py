@@ -62,20 +62,21 @@ def main():
                         screen = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
                     else:
                         screen = pygame.display.set_mode((w, h))
+                
+                # ★ 新規追加: Macの「delete」キー（BACKSPACE）または「Delete」キーでUndoを実行
+                elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE:
+                    canvas.undo()
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         frame_surface = pygame.surfarray.make_surface(image_rgb.swapaxes(0, 1))
 
-        # --- 顔認識と描画の連携 ---
-        # ★修正: 返り値に is_shaking が追加された
         current_nose_pos, is_nodding, is_shaking, wink_direction = tracker.get_nose_position(image_rgb, w, h)
 
         if is_nodding:
             print("👀 うなずきジェスチャーを検知しました！")
             canvas.save_image()
             
-        # ★新規追加: 首振りを検知したらUndoを実行
         if is_shaking:
             canvas.undo()
 
@@ -83,22 +84,17 @@ def main():
             canvas.change_color(wink_direction)
 
         if current_nose_pos:
-            # 鼻が見つかっている間は、キャンバスに「点」を追加し続ける
             canvas.add_point(current_nose_pos)
             prev_nose_pos = current_nose_pos
         else:
-            # ★新規追加: 顔を見失ったら、そこで「一筆」を終了（区切る）
             canvas.end_stroke()
             prev_nose_pos = None
 
-        # --- 画面の合成 ---
         screen.blit(frame_surface, (0, 0))
         if prev_nose_pos:
             pygame.draw.circle(screen, config.Colors.GUIDE_RED, prev_nose_pos, 10)
             
-        # get_surface() が呼ばれるタイミングで、記憶しているすべての線が一気に描画される
         screen.blit(canvas.get_surface(), (0, 0))
-        
         canvas.draw_palette(screen)
 
         pygame.display.flip()

@@ -41,5 +41,5 @@ class Gestures:
     # --- 首振り設定 ---
     SHAKE_MIN_MOVEMENT = 0.015 
     SHAKE_TIMEOUT = 15
-    SHAKE_REQUIRED_SWITCHES = 4 
+    SHAKE_REQUIRED_SWITCHES = 2
     SHAKE_COOLDOWN = 30
