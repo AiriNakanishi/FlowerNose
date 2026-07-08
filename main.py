@@ -44,12 +44,14 @@ def main():
         success, image = cap.read()
         if not success: break
 
+        # ★ ここのスペースを8個に揃えました
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 cap.release()
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
+                # --- 全体操作 ---
                 if event.key == pygame.K_f:
                     is_fullscreen = not is_fullscreen
                     if is_fullscreen:
@@ -57,10 +59,31 @@ def main():
                     else:
                         screen = pygame.display.set_mode((w, h))
                 
-                # デバッグ用：キーボードでの強制Undoは両画面同時に適用
-                elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE:
+                # ==========================================
+                # 🎮 左プレイヤー（1P）のデバッグ操作
+                # ==========================================
+                elif event.key == pygame.K_w:
+                    print("⌨️ [左] キーボードから保存を実行")
+                    canvas.save_image('left')
+                elif event.key == pygame.K_z:
                     canvas.undo('left')
+                elif event.key == pygame.K_a:
+                    canvas.change_color('left', 'left')
+                elif event.key == pygame.K_d:
+                    canvas.change_color('left', 'right')
+
+                # ==========================================
+                # 🎮 右プレイヤー（2P）のデバッグ操作
+                # ==========================================
+                elif event.key == pygame.K_RETURN or event.key == pygame.K_UP:
+                    print("⌨️ [右] キーボードから保存を実行")
+                    canvas.save_image('right')
+                elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE or event.key == pygame.K_DOWN:
                     canvas.undo('right')
+                elif event.key == pygame.K_LEFT:
+                    canvas.change_color('right', 'left')
+                elif event.key == pygame.K_RIGHT:
+                    canvas.change_color('right', 'right')
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
