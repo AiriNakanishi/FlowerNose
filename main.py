@@ -8,7 +8,7 @@ from core.canvas_manager import CanvasManager
 
 def initialize_camera():
     print("カメラを探索しています...")
-    camera_indices = [0, 1, 2] 
+    camera_indices = [1, 0, 2] 
     
     for index in camera_indices:
         cap = cv2.VideoCapture(index)
@@ -31,13 +31,13 @@ def main():
     h, w, _ = frame.shape
     
     screen = pygame.display.set_mode((w, h))
-    pygame.display.set_caption('Flower Nose - AR Experience')
+    pygame.display.set_caption('Flower Nose - AR Experience (Dual Player)')
     clock = pygame.time.Clock()
 
     tracker = FaceTracker()
     canvas = CanvasManager(w, h)
     
-    prev_nose_pos = None
+    prev_nose_pos = {'left': None, 'right': None}
     is_fullscreen = False
 
     while cap.isOpened():
@@ -50,49 +50,62 @@ def main():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_RETURN:
-                    canvas.save_image()
-                elif event.key == pygame.K_LEFT:
-                    canvas.change_color('left')
-                elif event.key == pygame.K_RIGHT:
-                    canvas.change_color('right')
-                elif event.key == pygame.K_f:
+                if event.key == pygame.K_f:
                     is_fullscreen = not is_fullscreen
                     if is_fullscreen:
                         screen = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
                     else:
                         screen = pygame.display.set_mode((w, h))
                 
-                # ★ 新規追加: Macの「delete」キー（BACKSPACE）または「Delete」キーでUndoを実行
+                # デバッグ用：キーボードでの強制Undoは両画面同時に適用
                 elif event.key == pygame.K_BACKSPACE or event.key == pygame.K_DELETE:
-                    canvas.undo()
+                    canvas.undo('left')
+                    canvas.undo('right')
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         frame_surface = pygame.surfarray.make_surface(image_rgb.swapaxes(0, 1))
 
-        current_nose_pos, is_nodding, is_shaking, wink_direction = tracker.get_nose_position(image_rgb, w, h)
+        # ★ 2人分のデータが辞書形式で返ってくる
+        player_data = tracker.get_nose_position(image_rgb, w, h)
 
-        if is_nodding:
-            print("👀 うなずきジェスチャーを検知しました！")
-            canvas.save_image()
+        # ★ 左右それぞれのプレイヤーに対して処理を行う
+        for side in ['left', 'right']:
+            data = player_data[side]
             
-        if is_shaking:
-            canvas.undo()
+            if data['nodding']:
+                print(f"👀 {side}側のうなずきを検知！絵を保存します。")
+                canvas.save_image(side)
+                
+            if data['shaking']:
+                canvas.undo(side)
 
-        if wink_direction:
-            canvas.change_color(wink_direction)
+            if data['wink']:
+                canvas.change_color(side, data['wink'])
 
-        if current_nose_pos:
-            canvas.add_point(current_nose_pos)
-            prev_nose_pos = current_nose_pos
-        else:
-            canvas.end_stroke()
-            prev_nose_pos = None
+            if data['pos']:
+                canvas.add_point(side, data['pos'])
+                prev_nose_pos[side] = data['pos']
+            else:
+                canvas.end_stroke(side)
+                prev_nose_pos[side] = None
 
+        # --- 描画処理 ---
         screen.blit(frame_surface, (0, 0))
-        if prev_nose_pos:
-            pygame.draw.circle(screen, config.Colors.GUIDE_RED, prev_nose_pos, 10)
+        
+        # 中央の境界線を描画
+        pygame.draw.line(
+            screen, 
+            config.Colors.CENTER_LINE, 
+            (w // 2, 0), 
+            (w // 2, h), 
+            config.Sizes.CENTER_LINE_WIDTH
+        )
+
+        # ガイド（赤い点）の描画
+        for side in ['left', 'right']:
+            if prev_nose_pos[side]:
+                pygame.draw.circle(screen, config.Colors.GUIDE_RED, prev_nose_pos[side], 10)
             
         screen.blit(canvas.get_surface(), (0, 0))
         canvas.draw_palette(screen)
