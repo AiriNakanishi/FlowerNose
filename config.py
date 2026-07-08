@@ -27,9 +27,19 @@ class System:
     MODEL_PATH = os.path.join(BASE_DIR, "assets", "face_landmarker.task")
     
 class Gestures:
-    NOD_THRESHOLD = 0.04 
-    NOD_COOLDOWN = 45 
+    # ========================================================
+    # ★ うなずき（スピード＋静止方式）の新しい設定
+    # ========================================================
+    NOD_THRESHOLD = 0.04            # うなずきの深さ（4%）
+    NOD_STILLNESS_THRESHOLD = 0.015 # 静止とみなす最大ブレ幅（1.5%。人間が止まれる限界の微小な揺れ）
+    NOD_COOLDOWN = 15
     
-    # 新規追加: ウィンク判定の設定
-    WINK_THRESHOLD = 0.02 # 目の開きの閾値（これより小さければ閉じたと判定）
-    WINK_COOLDOWN = 15     # 連続で色が変わらないようにするクールダウン
+    # --- ウィンク設定 ---
+    WINK_THRESHOLD = 0.02 
+    WINK_COOLDOWN = 15     
+
+    # --- 首振り設定 ---
+    SHAKE_MIN_MOVEMENT = 0.015 
+    SHAKE_TIMEOUT = 15
+    SHAKE_REQUIRED_SWITCHES = 2
+    SHAKE_COOLDOWN = 30
