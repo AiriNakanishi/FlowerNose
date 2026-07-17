@@ -1,0 +1,131 @@
+"""
+花畑全体の管理
+
+保存済み PNG から花を選び、10〜30 本ランダム配置する。
+新しい花が保存されたら追加で咲かせ、背景（scenery/）の上に描画する。
+
+描画順（奥 → 手前）:
+  背景 → 光の粒 → 花（根元に影）
+"""
+
+import random
+
+import pygame
+
+from gallery.scenery.atmosphere import AtmosphereParticles
+from gallery.scenery.meadow_background import MeadowBackground
+from gallery.settings import (
+    BLOOM_STAGGER_MAX,
+    FLOWER_SCALE_MAX,
+    FLOWER_SCALE_MIN,
+    GROUND_Y_MAX,
+    GROUND_Y_MIN,
+    MAX_FLOWERS,
+    MIN_FLOWERS,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+)
+from gallery.visitor_flowers.blooming_flower import BloomingFlower
+
+
+class FlowerField:
+    """花畑の配置・更新・描画を一手に担う"""
+
+    def __init__(self):
+        self.flowers: list[BloomingFlower] = []
+        self.known_files: set[str] = set()
+        self._cached_images: dict[str, pygame.Surface] = {}
+        self.background = MeadowBackground(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.atmosphere = AtmosphereParticles(WINDOW_WIDTH, WINDOW_HEIGHT)
+
+    def _load_image(self, path: str) -> pygame.Surface | None:
+        if path in self._cached_images:
+            return self._cached_images[path]
+        try:
+            img = pygame.image.load(path).convert_alpha()
+            self._cached_images[path] = img
+            return img
+        except pygame.error:
+            print(f"画像読み込みエラー: {path}")
+            return None
+
+    def _pick_image(self, paths: list[str]) -> pygame.Surface | None:
+        if not paths:
+            return None
+        path = random.choice(paths)
+        return self._load_image(path)
+
+    def _make_flower(
+        self,
+        image: pygame.Surface,
+        stagger: bool = True,
+        immediate: bool = False,
+    ) -> BloomingFlower:
+        margin = int(WINDOW_WIDTH * 0.08)
+        x = random.randint(margin, WINDOW_WIDTH - margin)
+        ground_y = random.randint(GROUND_Y_MIN, GROUND_Y_MAX)
+
+        # 手前（y が大きい）ほど花を大きく
+        depth = (ground_y - GROUND_Y_MIN) / max(1, GROUND_Y_MAX - GROUND_Y_MIN)
+        scale = FLOWER_SCALE_MIN + (FLOWER_SCALE_MAX - FLOWER_SCALE_MIN) * (0.35 + 0.65 * depth)
+
+        delay = 0.0 if immediate else random.uniform(0, BLOOM_STAGGER_MAX)
+        return BloomingFlower(
+            image=image,
+            x=x,
+            ground_y=ground_y,
+            scale=scale,
+            delay=delay,
+            flip_x=random.choice([True, False]),
+        )
+
+    def _trim_to_max(self) -> None:
+        if len(self.flowers) <= MAX_FLOWERS:
+            return
+        self.flowers.sort(key=lambda f: f.ground_y)
+        self.flowers = self.flowers[-MAX_FLOWERS:]
+
+    def populate(self, paths: list[str]) -> None:
+        """起動時 or R キー: 10〜30 本をランダム配置して時間差で咲かせる"""
+        if not paths:
+            self.flowers.clear()
+            return
+
+        count = random.randint(MIN_FLOWERS, MAX_FLOWERS)
+        self.flowers = []
+        for _ in range(count):
+            img = self._pick_image(paths)
+            if img:
+                self.flowers.append(self._make_flower(img, stagger=True))
+
+        # 奥から手前の順に描画
+        self.flowers.sort(key=lambda f: f.ground_y)
+        self.known_files = set(paths)
+
+    def add_new_flowers(self, paths: list[str]) -> None:
+        """新しく保存された花だけを追加で咲かせる"""
+        new_paths = [p for p in paths if p not in self.known_files]
+        self.known_files = set(paths)
+
+        for path in new_paths:
+            img = self._load_image(path)
+            if img is None:
+                continue
+            self.flowers.append(self._make_flower(img, stagger=False, immediate=False))
+            self.flowers[-1].delay = random.uniform(0.2, 1.0)
+
+        self._trim_to_max()
+        self.flowers.sort(key=lambda f: f.ground_y)
+
+    def update(self, dt: float) -> None:
+        for flower in self.flowers:
+            flower.update(dt)
+        self.atmosphere.update(dt)
+
+    def draw_background(self, screen: pygame.Surface, time_sec: float) -> None:
+        self.background.draw(screen, time_sec)
+        self.atmosphere.draw(screen, time_sec)
+
+    def draw(self, screen: pygame.Surface, time_sec: float) -> None:
+        for flower in self.flowers:
+            flower.draw(screen, time_sec)
