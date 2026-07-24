@@ -1,9 +1,4 @@
-"""
-1 本の花の咲きアニメーション
-
-来場者が描いた PNG 1 枚を、地面（ground_y）を根元として
-高さ 0 → 100% に伸ばし、咲き終わったら風で揺らす。
-"""
+"""Bloom animation for one saved flower image."""
 
 import math
 import random
@@ -15,7 +10,7 @@ from gallery.settings import BLOOM_DURATION_MAX, BLOOM_DURATION_MIN
 
 
 class BloomingFlower:
-    """来場者が描いた 1 枚の花を、地面から咲かせる"""
+    """Grow a visitor flower from its baseline and then gently sway it."""
 
     def __init__(
         self,
@@ -35,14 +30,12 @@ class BloomingFlower:
         self.elapsed = 0.0
         self.duration = random.uniform(BLOOM_DURATION_MIN, BLOOM_DURATION_MAX)
 
-        # 咲き終わったあとの風による揺れ
         self.sway_phase = random.uniform(0, math.pi * 2)
         self.sway_speed = random.uniform(0.8, 1.4)
         self.sway_amount = random.uniform(2, 5)
 
     @property
     def progress(self) -> float:
-        """咲き具合 0.0（地面に埋まっている）〜 1.0（咲き終わり）"""
         if self.delay > 0:
             return 0.0
         t = min(1.0, self.elapsed / self.duration)
@@ -66,17 +59,7 @@ class BloomingFlower:
         width: int,
         progress: float,
     ) -> None:
-        """根元の楕円影で、花が地面に立っている感じを出す"""
-        if progress < 0.15:
-            return
-
-        shadow_w = max(8, int(width * 0.55 * min(1.0, progress)))
-        shadow_h = max(3, int(shadow_w * 0.22))
-        alpha = int(55 * min(1.0, progress))
-
-        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (20, 45, 22, alpha), shadow.get_rect())
-        screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2))
+        return
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
         progress = self.progress
@@ -87,7 +70,6 @@ class BloomingFlower:
         base_w = max(1, int(src.get_width() * self.scale))
         base_h = max(1, int(src.get_height() * self.scale))
 
-        # 高さだけ伸ばして「地面から生えてくる」表現
         grow = ease_out_cubic(min(1.0, progress * 1.15))
         draw_h = max(1, int(base_h * grow))
         draw_w = base_w
