@@ -1,8 +1,8 @@
 """
-空中を漂う光の粒（花粉・ちり）
+Floating light particles for the gallery background.
 
-画面全体にゆっくり流れる小さな点で、静止した背景に奥行きと空気感を足す。
-花より背面に描画する。
+The particles are drawn behind the flowers to add a fresh, airy feeling without
+adding noisy grass detail.
 """
 
 import math
@@ -11,50 +11,90 @@ import random
 import pygame
 
 
-class AtmosphereParticles:
-    """夕方の光に浮かぶ微粒子"""
+REFERENCE_WIDTH = 1280
+REFERENCE_HEIGHT = 720
+AA_SCALE = 3
 
-    def __init__(self, width: int, height: int, count: int = 55):
+
+class AtmosphereParticles:
+    """Soft light motes drifting through the gallery scene."""
+
+    def __init__(self, width: int, height: int, count: int | None = None):
         self.width = width
         self.height = height
+        self.display_scale = min(width / REFERENCE_WIDTH, height / REFERENCE_HEIGHT)
         self.rng = random.Random(7)
         self.particles: list[dict] = []
 
+        if count is None:
+            count = int(14 * self.display_scale)
+
         for _ in range(count):
+            large = self.rng.random() < 0.04
+            if large:
+                size = self.rng.uniform(1.8, 3.2) * self.display_scale
+                alpha = self.rng.randint(14, 30)
+            else:
+                size = self.rng.uniform(0.6, 1.3) * self.display_scale
+                alpha = self.rng.randint(14, 34)
+
             self.particles.append({
                 "x": self.rng.uniform(0, width),
-                "y": self.rng.uniform(0, height * 0.82),
-                "size": self.rng.uniform(1.2, 3.5),
-                "vx": self.rng.uniform(6, 22),
-                "vy": self.rng.uniform(-6, 6),
+                "y": self.rng.uniform(height * 0.08, height * 0.58),
+                "size": size,
+                "vx": self.rng.uniform(9, 26) * self.display_scale,
+                "vy": self.rng.uniform(-12, -2) * self.display_scale,
                 "phase": self.rng.uniform(0, math.pi * 2),
-                "wobble": self.rng.uniform(0.6, 1.4),
-                "alpha": self.rng.randint(35, 100),
-                "warm": self.rng.random() < 0.65,
+                "wobble": self.rng.uniform(0.35, 1.1),
+                "alpha": alpha,
+                "large": large,
+                "warm": self.rng.random() < 0.7,
             })
 
     def update(self, dt: float) -> None:
+        margin = 24 * self.display_scale
         for p in self.particles:
             p["x"] += p["vx"] * dt
             p["y"] += p["vy"] * dt
-            if p["x"] > self.width + 10:
-                p["x"] = -10
-                p["y"] = self.rng.uniform(0, self.height * 0.82)
-            elif p["x"] < -10:
-                p["x"] = self.width + 10
+            if p["x"] > self.width + margin or p["y"] < -margin:
+                p["x"] = self.rng.uniform(-margin * 2, self.width * 0.22)
+                p["y"] = self.rng.uniform(self.height * 0.36, self.height * 0.62)
+            elif p["x"] < -margin:
+                p["x"] = self.width + margin
+
+    def _draw_glow(
+        self,
+        screen: pygame.Surface,
+        x: int,
+        y: int,
+        size: int,
+        color: tuple[int, int, int, int],
+    ) -> None:
+        glow_size = max(6, size * 5)
+        hi_size = glow_size * AA_SCALE
+        hi = pygame.Surface((hi_size, hi_size), pygame.SRCALPHA)
+        center = hi_size // 2
+        pygame.draw.circle(hi, (*color[:3], color[3] // 4), (center, center), size * AA_SCALE * 2)
+        pygame.draw.circle(hi, color, (center, center), size * AA_SCALE)
+        surf = pygame.transform.smoothscale(hi, (glow_size, glow_size))
+        screen.blit(surf, (x - glow_size // 2, y - glow_size // 2), special_flags=pygame.BLEND_RGBA_ADD)
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
         for p in self.particles:
-            wobble_y = math.sin(time_sec * p["wobble"] + p["phase"]) * 4
+            wobble_y = math.sin(time_sec * p["wobble"] + p["phase"]) * 6 * self.display_scale
+            shimmer = 0.66 + 0.34 * math.sin(time_sec * 1.2 + p["phase"])
             x = int(p["x"])
             y = int(p["y"] + wobble_y)
-            size = int(p["size"])
+            size = max(1, int(p["size"]))
 
             if p["warm"]:
-                color = (255, 248, 210, p["alpha"])
+                color = (255, 252, 214, int(p["alpha"] * shimmer))
             else:
-                color = (220, 240, 255, p["alpha"] // 2)
+                color = (224, 248, 255, int(p["alpha"] * 0.75 * shimmer))
 
-            surf = pygame.Surface((size * 2 + 2, size * 2 + 2), pygame.SRCALPHA)
-            pygame.draw.circle(surf, color, (size + 1, size + 1), size)
-            screen.blit(surf, (x - size, y - size))
+            if p["large"]:
+                self._draw_glow(screen, x, y, size, color)
+            else:
+                surf = pygame.Surface((size * 2 + 2, size * 2 + 2), pygame.SRCALPHA)
+                pygame.draw.circle(surf, color, (size + 1, size + 1), size)
+                screen.blit(surf, (x - size, y - size), special_flags=pygame.BLEND_RGBA_ADD)

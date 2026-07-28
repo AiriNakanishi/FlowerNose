@@ -360,6 +360,89 @@ class MeadowBackground:
         surface.blit(glow, (sun_x - glow_center, sun_y - glow_center))
         self._draw_smooth_circle(surface, self.SUN_CORE, (sun_x, sun_y), int(26 * sun_scale))
 
+    def _draw_bird(
+        self,
+        screen: pygame.Surface,
+        x: int,
+        y: int,
+        size: float,
+        wing_phase: float,
+        alpha: int,
+    ) -> None:
+        wing = 0.5 + 0.5 * math.sin(wing_phase)
+        span = max(24, int(size))
+        lift = int(size * (0.26 + 0.16 * wing))
+        canvas_pad = int(span * 0.42)
+        canvas_w = (span * 2 + canvas_pad * 2) * AA_SCALE
+        canvas_h = (lift + canvas_pad * 2 + int(size * 0.5)) * AA_SCALE
+        bird = pygame.Surface((canvas_w, canvas_h), pygame.SRCALPHA)
+        origin_x = canvas_w // 2
+        origin_y = canvas_h // 2 + int(size * 0.14 * AA_SCALE)
+        stroke = max(2, int(size * 0.07 * AA_SCALE))
+        wing_color = (248, 252, 246, alpha)
+        shadow_color = (106, 135, 132, max(12, alpha // 3))
+
+        def scale_point(px: float, py: float) -> tuple[int, int]:
+            return (int(origin_x + px * AA_SCALE), int(origin_y + py * AA_SCALE))
+
+        def wing_curve(side: int) -> list[tuple[int, int]]:
+            points = []
+            for step in range(7):
+                t = step / 6
+                px = side * span * t
+                py = -lift * math.sin(t * math.pi) + size * 0.10 * t
+                points.append(scale_point(px, py))
+            return points
+
+        left = wing_curve(-1)
+        right = wing_curve(1)
+        for points in (left, right):
+            shadow_points = [(px, py + max(1, AA_SCALE)) for px, py in points]
+            pygame.draw.lines(bird, shadow_color, False, shadow_points, stroke)
+            pygame.draw.lines(bird, wing_color, False, points, stroke)
+
+        body_w = max(3, int(size * 0.20 * AA_SCALE))
+        body_h = max(2, int(size * 0.09 * AA_SCALE))
+        pygame.draw.ellipse(
+            bird,
+            (250, 252, 246, alpha),
+            (origin_x - body_w // 2, origin_y - body_h // 2, body_w, body_h),
+        )
+
+        smooth = pygame.transform.smoothscale(
+            bird,
+            (max(1, canvas_w // AA_SCALE), max(1, canvas_h // AA_SCALE)),
+        )
+        screen.blit(smooth, (x - smooth.get_width() // 2, y - smooth.get_height() // 2))
+
+    def _draw_birds(self, screen: pygame.Surface, time_sec: float) -> None:
+        cycle = 24.0
+        visible_time = 7.5
+        cycle_t = time_sec % cycle
+        if cycle_t > visible_time:
+            return
+
+        cycle_index = int(time_sec // cycle)
+        rng = random.Random(300 + cycle_index)
+        flock_size = 1 if rng.random() < 0.8 else 2
+        direction = -1 if rng.random() < 0.5 else 1
+        start_x = -int(self.width * 0.08) if direction > 0 else int(self.width * 1.08)
+        travel = self.width * 1.16
+        progress = cycle_t / visible_time
+        base_y = rng.uniform(self.height * 0.20, self.height * 0.32)
+        base_size = rng.uniform(34, 44) * self.display_scale
+
+        for i in range(flock_size):
+            spacing = i * rng.uniform(180, 260) * self.display_scale
+            x = start_x + direction * (travel * progress - spacing)
+            y = base_y + math.sin(progress * math.pi + i * 0.8) * 18 * self.display_scale
+            y += (i % 2) * 24 * self.display_scale
+            if x < -80 * self.display_scale or x > self.width + 80 * self.display_scale:
+                continue
+            alpha = int(82 * math.sin(progress * math.pi))
+            wing_phase = time_sec * 2.6 + i * 0.8
+            self._draw_bird(screen, int(x), int(y), base_size * (1 - i * 0.1), wing_phase, alpha)
+
     def _build_static(self) -> pygame.Surface:
         surface = pygame.Surface((self.width, self.height))
 
@@ -368,14 +451,17 @@ class MeadowBackground:
         )
         self._draw_sun(surface)
 
-        self._draw_hill_layer(surface, self.horizon_y - int(10 * self.display_scale), self.HILL_FAR, 26, 0.0045 / self.display_scale, 0.8)
-        self._draw_hill_layer(surface, self.horizon_y + int(8 * self.display_scale), self.HILL_MID, 32, 0.0055 / self.display_scale, 2.1)
-        self._draw_hill_layer(surface, self.horizon_y + int(28 * self.display_scale), self.HILL_NEAR, 38, 0.0065 / self.display_scale, 4.0)
+        self._draw_hill_layer(surface, self.horizon_y - int(46 * self.display_scale), self.HILL_FAR, 42, 0.0045 / self.display_scale, 0.8)
+        self._draw_hill_layer(surface, self.horizon_y - int(22 * self.display_scale), self.HILL_MID, 48, 0.0055 / self.display_scale, 2.1)
+        self._draw_hill_layer(surface, self.horizon_y + int(10 * self.display_scale), self.HILL_NEAR, 52, 0.0065 / self.display_scale, 4.0)
         pygame.draw.rect(
             surface,
-            self.FIELD_BACK,
+            (132, 172, 98),
             (0, self.horizon_y + int(14 * self.display_scale), self.width, int(18 * self.display_scale)),
         )
+        haze_band = pygame.Surface((self.width, int(42 * self.display_scale)), pygame.SRCALPHA)
+        haze_band.fill((234, 226, 182, 24))
+        surface.blit(haze_band, (0, self.horizon_y + int(4 * self.display_scale)))
         self._draw_background_trees(surface)
 
         field_top = self.horizon_y + int(18 * self.display_scale)
@@ -420,3 +506,4 @@ class MeadowBackground:
         screen.blit(self.static, (0, 0))
         for cloud in self.clouds:
             cloud.draw(screen, time_sec, self.width)
+        self._draw_birds(screen, time_sec)
