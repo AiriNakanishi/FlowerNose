@@ -14,6 +14,9 @@ from gallery.animation_helpers import ease_out_back, ease_out_cubic
 from gallery.settings import BLOOM_DURATION_MAX, BLOOM_DURATION_MIN
 
 
+AA_SCALE = 3
+
+
 class BloomingFlower:
     """来場者が描いた 1 枚の花を、地面から咲かせる"""
 
@@ -74,8 +77,9 @@ class BloomingFlower:
         shadow_h = max(3, int(shadow_w * 0.22))
         alpha = int(55 * min(1.0, progress))
 
-        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (20, 45, 22, alpha), shadow.get_rect())
+        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow_hi, (20, 45, 22, alpha), shadow_hi.get_rect())
+        shadow = pygame.transform.smoothscale(shadow_hi, (shadow_w, shadow_h))
         screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2))
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
