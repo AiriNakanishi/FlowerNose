@@ -16,6 +16,8 @@ from gallery.scenery.drifting_cloud import DriftingCloud
 
 
 AA_SCALE = 3
+REFERENCE_WIDTH = 1280
+REFERENCE_HEIGHT = 720
 
 
 class MeadowBackground:
@@ -45,6 +47,7 @@ class MeadowBackground:
     def __init__(self, width: int, height: int):
         self.width = width
         self.height = height
+        self.display_scale = min(width / REFERENCE_WIDTH, height / REFERENCE_HEIGHT)
         self.horizon_y = int(height * 0.52)
         self.rng = random.Random(42)
         self.static = self._build_static()
@@ -78,10 +81,10 @@ class MeadowBackground:
         phase: float,
     ) -> None:
         points = [(0, self.height)]
-        step = 24
+        step = max(24, int(24 * self.display_scale))
         for x in range(0, self.width + step, step):
-            wave = math.sin(x * frequency + phase) * amplitude
-            wave += math.sin(x * frequency * 2.1 + phase * 1.7) * amplitude * 0.35
+            wave = math.sin(x * frequency + phase) * amplitude * self.display_scale
+            wave += math.sin(x * frequency * 2.1 + phase * 1.7) * amplitude * self.display_scale * 0.35
             y = base_y + wave
             points.append((x, y))
         points.append((self.width, self.height))
@@ -98,7 +101,7 @@ class MeadowBackground:
             x = self.rng.randint(0, self.width)
             y = self.rng.randint(y_start, y_end)
             depth = (y - y_start) / max(1, y_end - y_start)
-            length = self.rng.randint(2, 5 + int(depth * 5))
+            length = int(self.rng.randint(2, 5 + int(depth * 5)) * self.display_scale)
             angle = self.rng.uniform(-0.38, 0.38)
             dx = int(math.sin(angle) * length)
             dy = -int(math.cos(abs(angle)) * length)
@@ -116,9 +119,10 @@ class MeadowBackground:
         if rect.width <= 0 or rect.height <= 0:
             return
 
-        hi_size = (rect.width * AA_SCALE, rect.height * AA_SCALE)
+        scale = AA_SCALE if rect.width * rect.height < 420_000 else 1
+        hi_size = (rect.width * scale, rect.height * scale)
         hi = pygame.Surface(hi_size, pygame.SRCALPHA)
-        draw_func(hi, AA_SCALE)
+        draw_func(hi, scale)
         smoothed = pygame.transform.smoothscale(hi, rect.size)
         surface.blit(smoothed, rect)
 
@@ -188,10 +192,11 @@ class MeadowBackground:
         for i in range(band_count):
             t = i / max(1, band_count - 1)
             y = int(field_top + (self.height - field_top) * (0.12 + t * 0.86))
-            amplitude = 5 + int(t * 10)
+            amplitude = (5 + int(t * 10)) * self.display_scale
             phase = 0.7 + i * 0.72
             points = []
-            for x in range(-40, self.width + 44, 28):
+            step = max(28, int(28 * self.display_scale))
+            for x in range(-40, self.width + 44, step):
                 curve = math.sin(x * 0.006 + phase) * amplitude
                 curve += math.sin(x * 0.013 + phase * 1.8) * amplitude * 0.32
                 points.append((x, int(y + curve)))
@@ -199,7 +204,7 @@ class MeadowBackground:
             shadow = (*lerp_color(self.FIELD_SHADOW, self.FIELD_DEEP_SHADOW, t), 14 + int(t * 22))
             highlight = (*lerp_color(self.FIELD_LIGHT, (188, 202, 124), t * 0.5), 12 + int((1 - t) * 10))
             pygame.draw.aalines(overlay, shadow, False, points)
-            highlight_points = [(x, py - 5 - int(t * 4)) for x, py in points]
+            highlight_points = [(x, py - int((5 + t * 4) * self.display_scale)) for x, py in points]
             pygame.draw.aalines(overlay, highlight, False, highlight_points)
         surface.blit(overlay, (0, 0))
 
@@ -256,8 +261,9 @@ class MeadowBackground:
         for y_ratio, alpha in ((0.61, 16), (0.71, 13), (0.82, 10)):
             y = int(self.height * y_ratio)
             points = []
-            for x in range(-30, self.width + 32, 24):
-                wave = math.sin(x * 0.0048 + y_ratio * 8) * 8
+            step = max(24, int(24 * self.display_scale))
+            for x in range(-30, self.width + 32, step):
+                wave = math.sin(x * 0.0048 + y_ratio * 8) * 8 * self.display_scale
                 points.append((x, y + int(wave)))
             lower_points = [(x, py + int(self.height * 0.045)) for x, py in reversed(points)]
             self._draw_smooth_polygon(terrace, (142, 176, 88, alpha), points + lower_points)
@@ -280,8 +286,8 @@ class MeadowBackground:
                 base_color = lerp_color(base_color, self.FIELD_LIGHT, 0.2)
             for blade in range(blade_count):
                 offset = blade - blade_count // 2
-                length = self.rng.randint(5, 12 + int(depth * 14))
-                lean = offset * self.rng.uniform(1.8, 3.4) + self.rng.uniform(-3, 3)
+                length = int(self.rng.randint(5, 12 + int(depth * 14)) * self.display_scale)
+                lean = (offset * self.rng.uniform(1.8, 3.4) + self.rng.uniform(-3, 3)) * self.display_scale
                 tip = (int(x + lean), y - length)
                 pygame.draw.aaline(surface, base_color, (x + offset, y), tip)
 
@@ -293,6 +299,7 @@ class MeadowBackground:
         scale: float,
         lean: float = 0.0,
     ) -> None:
+        scale *= self.display_scale
         trunk_h = int(64 * scale)
         trunk_w = max(3, int(10 * scale))
         top_x = int(x + lean * scale)
@@ -343,12 +350,15 @@ class MeadowBackground:
     def _draw_sun(self, surface: pygame.Surface) -> None:
         sun_x = int(self.width * 0.78)
         sun_y = int(self.height * 0.14)
-        glow = pygame.Surface((260, 260), pygame.SRCALPHA)
+        sun_scale = self.display_scale
+        glow_size = int(260 * sun_scale)
+        glow_center = glow_size // 2
+        glow = pygame.Surface((glow_size, glow_size), pygame.SRCALPHA)
         for radius, alpha in ((120, 18), (90, 32), (60, 48), (36, 70)):
             color = (*self.SUN_GLOW, alpha)
-            self._draw_smooth_circle(glow, color, (130, 130), radius)
-        surface.blit(glow, (sun_x - 130, sun_y - 130))
-        self._draw_smooth_circle(surface, self.SUN_CORE, (sun_x, sun_y), 26)
+            self._draw_smooth_circle(glow, color, (glow_center, glow_center), int(radius * sun_scale))
+        surface.blit(glow, (sun_x - glow_center, sun_y - glow_center))
+        self._draw_smooth_circle(surface, self.SUN_CORE, (sun_x, sun_y), int(26 * sun_scale))
 
     def _build_static(self) -> pygame.Surface:
         surface = pygame.Surface((self.width, self.height))
@@ -358,12 +368,17 @@ class MeadowBackground:
         )
         self._draw_sun(surface)
 
-        self._draw_hill_layer(surface, self.horizon_y - 10, self.HILL_FAR, 26, 0.0045, 0.8)
-        self._draw_hill_layer(surface, self.horizon_y + 8, self.HILL_MID, 32, 0.0055, 2.1)
-        self._draw_hill_layer(surface, self.horizon_y + 28, self.HILL_NEAR, 38, 0.0065, 4.0)
+        self._draw_hill_layer(surface, self.horizon_y - int(10 * self.display_scale), self.HILL_FAR, 26, 0.0045 / self.display_scale, 0.8)
+        self._draw_hill_layer(surface, self.horizon_y + int(8 * self.display_scale), self.HILL_MID, 32, 0.0055 / self.display_scale, 2.1)
+        self._draw_hill_layer(surface, self.horizon_y + int(28 * self.display_scale), self.HILL_NEAR, 38, 0.0065 / self.display_scale, 4.0)
+        pygame.draw.rect(
+            surface,
+            self.FIELD_BACK,
+            (0, self.horizon_y + int(14 * self.display_scale), self.width, int(18 * self.display_scale)),
+        )
         self._draw_background_trees(surface)
 
-        field_top = self.horizon_y + 18
+        field_top = self.horizon_y + int(18 * self.display_scale)
         self._draw_vertical_gradient(
             surface, self.FIELD_BACK, self.FIELD_MID, self.FIELD_FRONT, field_top, self.height
         )
@@ -386,16 +401,18 @@ class MeadowBackground:
         surface.blit(light_patch, (0, 0))
         surface.blit(shadow_patch, (0, 0))
 
-        self._draw_grass_texture(surface, field_top, int(self.height * 0.72), 76)
-        self._draw_grass_texture(surface, int(self.height * 0.66), self.height, 96)
-        self._draw_grass_clumps(surface, int(self.height * 0.62), int(self.height * 0.76), 4)
-        self._draw_grass_clumps(surface, int(self.height * 0.76), self.height, 6)
+        self._draw_grass_texture(surface, field_top, int(self.height * 0.72), int(76 * self.display_scale))
+        self._draw_grass_texture(surface, int(self.height * 0.66), self.height, int(96 * self.display_scale))
+        self._draw_grass_clumps(surface, int(self.height * 0.62), int(self.height * 0.76), int(4 * self.display_scale))
+        self._draw_grass_clumps(surface, int(self.height * 0.76), self.height, int(6 * self.display_scale))
 
-        haze = pygame.Surface((self.width, 80), pygame.SRCALPHA)
-        for y in range(80):
-            alpha = int(38 * (1 - abs(y - 40) / 40))
+        haze_height = int(80 * self.display_scale)
+        haze = pygame.Surface((self.width, haze_height), pygame.SRCALPHA)
+        for y in range(haze_height):
+            center = haze_height / 2
+            alpha = int(38 * (1 - abs(y - center) / center))
             pygame.draw.line(haze, (255, 245, 220, alpha), (0, y), (self.width, y))
-        surface.blit(haze, (0, self.horizon_y - 40))
+        surface.blit(haze, (0, self.horizon_y - haze_height // 2))
 
         return surface.convert()
 
