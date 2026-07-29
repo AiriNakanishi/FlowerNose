@@ -4,7 +4,7 @@
 画面サイズ・花の本数・咲く速さなど、演出全体のパラメータをまとめたファイル。
 数値を変えたいときは、まずここを見てください。
 """
-
+import os
 import config
 
 # --- 保存先・画面 ---
@@ -34,11 +34,12 @@ FOLDER_CHECK_INTERVAL = 2.0  # 新しい花 PNG を何秒ごとにチェック�
 FPS = 60
 
 # --- 豚のアニメーション ---
-import os
-import config
+
 
 PIG_IMAGE_PATH = os.path.join(config.BASE_DIR, "assets", "pig.png")
 PIG_SCALE_MIN = 0.15   # 奥にいるときのサイズ
 PIG_SCALE_MAX = 0.3    # 手前にいるときのサイズ
 PIG_SPEED_MIN = 30.0   # 歩く最低スピード
 PIG_SPEED_MAX = 70.0   # 歩く最高スピード
+
+

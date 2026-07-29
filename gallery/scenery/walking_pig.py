@@ -22,7 +22,7 @@ class WalkingPig:
         self.image_original = None
         if os.path.exists(PIG_IMAGE_PATH):
             try:
-                self.image_original = pygame.image.load(PIG_IMAGE_PATH).convert_alpha()
+                self.image_original = pygame.image.load(PIG_IMAGE_PATH)
             except pygame.error:
                 print(f"豚の画像読み込みエラー: {PIG_IMAGE_PATH}")
 
@@ -52,7 +52,7 @@ class WalkingPig:
         if self.image_original:
             w = int(self.image_original.get_width() * self.scale)
             h = int(self.image_original.get_height() * self.scale)
-            scaled = pygame.transform.smoothscale(self.image_original, (max(1, w), max(1, h)))
+            scaled = safe_scale(self.image_original, (max(1, w), max(1, h)))
             
             # 元画像が「左向き」なので、右向きに歩く時は画像を左右反転
             flip_x = (self.direction == 1)
@@ -84,7 +84,7 @@ class WalkingPig:
         shadow_h = int(shadow_w * 0.2)
         shadow_surf = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
         pygame.draw.ellipse(shadow_surf, (30, 60, 30, 40), shadow_surf.get_rect())
-        screen.blit(shadow_surf, (draw_x - shadow_w // 2, self.ground_y - shadow_h // 2))
+        screen.blit(shadow_surf, (draw_x - shadow_w // 2, self.ground_y - shadow_h // 2), special_flags=pygame.BLEND_PREMULTIPLIED)
 
         # 豚本体の描画
-        screen.blit(self.image, rect)
+        screen.blit(self.image, rect, special_flags=pygame.BLEND_PREMULTIPLIED)
