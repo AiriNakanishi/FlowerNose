@@ -27,6 +27,7 @@ class Sizes:
 class System:
     SAVE_DIR = os.path.join(BASE_DIR, "FlowerNose_Gallery")
     MODEL_PATH = os.path.join(BASE_DIR, "assets", "face_landmarker.task")
+    CAMERA_INDEX = 0
     
 class Gestures:
     NOD_THRESHOLD = 0.04            

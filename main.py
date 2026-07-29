@@ -8,19 +8,20 @@ from core.face_tracker import FaceTracker
 
 
 def initialize_camera():
-    print("Searching for camera...")
-    camera_indices = [1, 0, 2]
+    index = config.System.CAMERA_INDEX
+    print(f"Opening iVCam camera: index {index}")
 
-    for index in camera_indices:
-        cap = cv2.VideoCapture(index)
-        if cap.isOpened():
-            ret, _ = cap.read()
-            if ret:
-                print(f"Camera connected: {index}")
-                return cap
-            cap.release()
+    cap = cv2.VideoCapture(index, cv2.CAP_DSHOW)
+    if cap.isOpened():
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, config.Sizes.WINDOW_WIDTH)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, config.Sizes.WINDOW_HEIGHT)
+        ret, _ = cap.read()
+        if ret:
+            print(f"iVCam camera connected: {index}")
+            return cap
+        cap.release()
 
-    print("No available camera found.")
+    print("iVCam camera was not available. Start the iVCam app on the phone and PC, then run again.")
     sys.exit()
 
 
