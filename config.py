@@ -16,7 +16,6 @@ class Colors:
     TRANSPARENT = (0, 0, 0, 0)
     BLACK = (50, 50, 50)
     # ★追加：中央の境界線の色
-    CENTER_LINE = (200, 200, 200)
 
 class Sizes:
     WINDOW_WIDTH = 1280
@@ -24,7 +23,6 @@ class Sizes:
     PEN_THICKNESS = 20
     FPS = 30
     # ★追加：中央の境界線の太さ
-    CENTER_LINE_WIDTH = 4
 
 class System:
     SAVE_DIR = os.path.join(BASE_DIR, "FlowerNose_Gallery")
