@@ -399,10 +399,10 @@ class MeadowBackground:
 
     def _draw_background_trees(self, surface: pygame.Surface) -> None:
         trees = (
-            (0.08, 0.52, 0.48, -12),
-            (0.17, 0.51, 0.36, 8),
-            (0.91, 0.53, 0.43, 10),
-            (0.82, 0.515, 0.31, -6),
+            (0.08, 0.52, 0.68, -12),
+            (0.17, 0.51, 0.52, 8),
+            (0.91, 0.53, 0.62, 10),
+            (0.82, 0.515, 0.45, -6),
         )
         for x_ratio, y_ratio, scale, lean in trees:
             self._draw_tree(surface, int(self.width * x_ratio), int(self.height * y_ratio), scale, lean)
@@ -538,14 +538,7 @@ class MeadowBackground:
             radius = int(self.width * 0.18)
             alpha = 22 + i * 6
             self._draw_smooth_circle(light_patch, (210, 240, 160, alpha), (cx, cy), radius)
-        shadow_patch = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        self._draw_smooth_ellipse(
-            shadow_patch,
-            (20, 50, 25, 35),
-            (int(self.width * 0.55), int(self.height * 0.62), int(self.width * 0.5), int(self.height * 0.38)),
-        )
         surface.blit(light_patch, (0, 0))
-        surface.blit(shadow_patch, (0, 0))
 
         self._draw_meadow_color_grain(surface, field_top)
         self._draw_grass_texture(surface, field_top, int(self.height * 0.72), int(76 * self.display_scale))
