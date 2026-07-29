@@ -26,6 +26,7 @@ from gallery.settings import (
     WINDOW_WIDTH,
 )
 from gallery.visitor_flowers.blooming_flower import BloomingFlower
+from gallery.scenery.walking_pig import WalkingPig
 
 
 class FlowerField:
@@ -37,6 +38,7 @@ class FlowerField:
         self._cached_images: dict[str, pygame.Surface] = {}
         self.background = MeadowBackground(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.atmosphere = AtmosphereParticles(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.pig = WalkingPig()
 
     def _load_image(self, path: str) -> pygame.Surface | None:
         if path in self._cached_images:
@@ -121,11 +123,25 @@ class FlowerField:
         for flower in self.flowers:
             flower.update(dt)
         self.atmosphere.update(dt)
+        self.pig.update(dt)
 
     def draw_background(self, screen: pygame.Surface, time_sec: float) -> None:
         self.background.draw(screen, time_sec)
         self.atmosphere.draw(screen, time_sec)
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
+        render_objects = []
+            
+        # 花をリストに追加 (Y座標, オブジェクト種別, オブジェクト本体)
         for flower in self.flowers:
-            flower.draw(screen, time_sec)
+            render_objects.append((flower.ground_y, 'flower', flower))
+            
+        # 豚をリストに追加
+        render_objects.append((self.pig.ground_y, 'pig', self.pig))
+        
+        # 奥（Y座標が小さい）から手前（Y座標が大きい）の順に並び替え
+        render_objects.sort(key=lambda item: item[0])
+        
+        # 順番に描画
+        for ground_y, obj_type, obj in render_objects:
+            obj.draw(screen, time_sec)

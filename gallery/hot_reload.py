@@ -20,6 +20,7 @@ _RELOAD_MODULES = (
     "gallery.scenery.drifting_cloud",
     "gallery.scenery.meadow_background",
     "gallery.scenery.atmosphere",
+    "gallery.scenery.walking_pig",
     "gallery.scenery",
     "gallery.visitor_flowers.blooming_flower",
     "gallery.visitor_flowers.flower_field",
