@@ -1,91 +1,138 @@
 import math
-import random
 import os
+import random
+
 import pygame
 
 from gallery.settings import (
-    PIG_IMAGE_PATH,
-    PIG_SCALE_MIN,
-    PIG_SCALE_MAX,
-    PIG_SPEED_MIN,
-    PIG_SPEED_MAX,
-    GROUND_Y_MIN,
     GROUND_Y_MAX,
-    WINDOW_WIDTH
+    GROUND_Y_MIN,
+    PIG_ANIMATION_FPS,
+    PIG_IMAGE_PATH,
+    PIG_SCALE_MAX,
+    PIG_SCALE_MIN,
+    PIG_SPEED_MAX,
+    PIG_SPEED_MIN,
+    PIG_WAIT_MAX,
+    PIG_WAIT_MIN,
+    WALKPIG_ASSET_DIR,
+    WINDOW_WIDTH,
 )
 
+
 class WalkingPig:
-    """草原をトコトコ歩く豚さん"""
+    """A pig that wanders around the flower field with a simple walk cycle."""
 
     def __init__(self):
-        self.image_original = None
-        if os.path.exists(PIG_IMAGE_PATH):
-            try:
-                self.image_original = pygame.image.load(PIG_IMAGE_PATH).convert_alpha()
-            except pygame.error:
-                print(f"豚の画像読み込みエラー: {PIG_IMAGE_PATH}")
-
         self.width = WINDOW_WIDTH
+        self.animation_sets = self._load_animation_sets()
+        self.frames_original = random.choice(self.animation_sets)
+        self.frame_time = 0.0
+        self.direction = -1
+        self.wait_timer = 0.0
         self.reset()
 
-    def reset(self):
-        """画面外から新しいスピードと高さで再出発する"""
-        # 方向: 1 (右向き), -1 (左向き)
-        self.direction = random.choice([1, -1])
-        self.speed = random.uniform(PIG_SPEED_MIN, PIG_SPEED_MAX) * self.direction
-        
-        # 画面の端のさらに奥からスタートさせる
-        if self.direction == 1:
-            self.x = -150.0
-        else:
-            self.x = self.width + 150.0
+    def _load_animation_sets(self) -> list[list[pygame.Surface]]:
+        animation_sets = []
 
-        # 草原の範囲内に配置 (花と同じか少し奥を歩かせる)
-        self.ground_y = random.randint(GROUND_Y_MIN, GROUND_Y_MAX) 
-        
-        # Y座標(奥行き)に合わせてスケールを調整
+        if os.path.isdir(WALKPIG_ASSET_DIR):
+            variant_dirs = sorted(
+                os.path.join(WALKPIG_ASSET_DIR, name)
+                for name in os.listdir(WALKPIG_ASSET_DIR)
+                if name.startswith("variant_")
+            )
+            for variant_dir in variant_dirs:
+                frames = []
+                for frame_name in sorted(os.listdir(variant_dir)):
+                    if not frame_name.lower().endswith(".png"):
+                        continue
+                    path = os.path.join(variant_dir, frame_name)
+                    try:
+                        frames.append(pygame.image.load(path).convert_alpha())
+                    except pygame.error:
+                        print(f"Pig frame load error: {path}")
+                if frames:
+                    animation_sets.append(frames)
+
+        if animation_sets:
+            return animation_sets
+
+        if os.path.exists(PIG_IMAGE_PATH):
+            try:
+                return [[pygame.image.load(PIG_IMAGE_PATH).convert_alpha()]]
+            except pygame.error:
+                print(f"Pig image load error: {PIG_IMAGE_PATH}")
+
+        fallback = pygame.Surface((1, 1), pygame.SRCALPHA)
+        return [[fallback]]
+
+    def reset(self):
+        self.frames_original = random.choice(self.animation_sets)
+        self.x = random.uniform(self.width * 0.15, self.width * 0.85)
+        self.ground_y = random.randint(GROUND_Y_MIN, GROUND_Y_MAX)
+        self._choose_target()
+
+    def _choose_target(self):
+        self.target_x = random.uniform(self.width * 0.08, self.width * 0.92)
+        self.target_y = random.randint(GROUND_Y_MIN, GROUND_Y_MAX)
+        self.speed = random.uniform(PIG_SPEED_MIN, PIG_SPEED_MAX)
+
+        if random.random() < 0.25:
+            self.frames_original = random.choice(self.animation_sets)
+
+    def _current_scale(self) -> float:
         depth = (self.ground_y - GROUND_Y_MIN) / max(1, GROUND_Y_MAX - GROUND_Y_MIN)
-        self.scale = PIG_SCALE_MIN + (PIG_SCALE_MAX - PIG_SCALE_MIN) * depth
-        
-        self.image = None
-        if self.image_original:
-            w = int(self.image_original.get_width() * self.scale)
-            h = int(self.image_original.get_height() * self.scale)
-            scaled = pygame.transform.smoothscale(self.image_original, (max(1, w), max(1, h)))
-            
-            # 元画像が「左向き」なので、右向きに歩く時は画像を左右反転
-            flip_x = (self.direction == 1)
-            self.image = pygame.transform.flip(scaled, flip_x, False)
+        return PIG_SCALE_MIN + (PIG_SCALE_MAX - PIG_SCALE_MIN) * depth
 
     def update(self, dt: float) -> None:
-        self.x += self.speed * dt
-        
-        # 画面外に完全に出たらリセットして再登場
-        if self.direction == 1 and self.x > self.width + 200:
-            self.reset()
-        elif self.direction == -1 and self.x < -200:
-            self.reset()
+        if self.wait_timer > 0:
+            self.wait_timer = max(0.0, self.wait_timer - dt)
+            if self.wait_timer == 0:
+                self._choose_target()
+            return
+
+        dx = self.target_x - self.x
+        dy = self.target_y - self.ground_y
+        distance = math.hypot(dx, dy)
+
+        if distance < 6.0:
+            self.wait_timer = random.uniform(PIG_WAIT_MIN, PIG_WAIT_MAX)
+            return
+
+        move = min(self.speed * dt, distance)
+        self.x += dx / distance * move
+        self.ground_y += dy / distance * move
+        self.direction = 1 if dx > 0 else -1
+        self.frame_time += dt
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
-        if not self.image:
+        if not self.frames_original:
             return
-        
-        # ゆっくり大きくジャンプする調整（残してあります）
-        bounce = abs(math.sin(time_sec * 3.0)) * 200.0 * self.scale
-        
-        draw_x = int(self.x)
-        draw_y = int(self.ground_y - bounce + (150 * self.scale))
-        
-        rect = self.image.get_rect(midbottom=(draw_x, draw_y))
-        
-        # ちょっとした足元の影
-        shadow_w = int(self.image.get_width() * 0.6)
-        shadow_h = int(shadow_w * 0.2)
-        shadow_surf = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow_surf, (30, 60, 30, 40), shadow_surf.get_rect())
-        
-        # 影はコメントアウトした状態のままにしてあります
-        # screen.blit(shadow_surf, (draw_x - shadow_w // 2, self.ground_y - shadow_h // 2))
 
-        # 豚本体の描画
-        screen.blit(self.image, rect)
+        if self.wait_timer > 0:
+            frame_index = 0
+        else:
+            frame_index = int(self.frame_time * PIG_ANIMATION_FPS) % len(self.frames_original)
+
+        frame = self.frames_original[frame_index]
+        scale = self._current_scale()
+        width = max(1, int(frame.get_width() * scale))
+        height = max(1, int(frame.get_height() * scale))
+        image = pygame.transform.smoothscale(frame, (width, height))
+
+        # Generated frames face left. Flip when walking to the right.
+        if self.direction == 1:
+            image = pygame.transform.flip(image, True, False)
+
+        bob = 0.0 if self.wait_timer > 0 else abs(math.sin(time_sec * 8.0)) * 8.0 * scale
+        draw_x = int(self.x)
+        draw_y = int(self.ground_y - bob)
+
+        shadow_w = max(1, int(width * 0.55))
+        shadow_h = max(1, int(shadow_w * 0.18))
+        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (30, 60, 30, 35), shadow.get_rect())
+        screen.blit(shadow, (draw_x - shadow_w // 2, int(self.ground_y - shadow_h // 2)))
+
+        rect = image.get_rect(midbottom=(draw_x, draw_y))
+        screen.blit(image, rect)
