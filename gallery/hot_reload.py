@@ -22,6 +22,8 @@ _RELOAD_MODULES = (
     "gallery.scenery.atmosphere",
     "gallery.scenery.walking_pig",
     "gallery.scenery",
+    "gallery.frame_decor.garden_frame",
+    "gallery.frame_decor",
     "gallery.visitor_flowers.blooming_flower",
     "gallery.visitor_flowers.flower_field",
     "gallery.visitor_flowers",

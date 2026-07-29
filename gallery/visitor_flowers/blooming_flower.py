@@ -103,7 +103,5 @@ class BloomingFlower:
             sway_x = int(math.sin(time_sec * self.sway_speed + self.sway_phase) * self.sway_amount)
 
         draw_x = self.x + sway_x
-        self._draw_ground_shadow(screen, draw_x, self.ground_y, draw_w, progress)
-
         rect = scaled.get_rect(midbottom=(draw_x, self.ground_y))
         screen.blit(scaled, rect)

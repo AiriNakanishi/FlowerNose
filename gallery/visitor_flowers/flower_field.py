@@ -13,6 +13,7 @@ import random
 import pygame
 
 from gallery.scenery.atmosphere import AtmosphereParticles
+from gallery.frame_decor import GardenFrame
 from gallery.scenery.meadow_background import MeadowBackground
 from gallery.settings import (
     BLOOM_STAGGER_MAX,
@@ -38,6 +39,7 @@ class FlowerField:
         self._cached_images: dict[str, pygame.Surface] = {}
         self.background = MeadowBackground(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.atmosphere = AtmosphereParticles(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.frame = GardenFrame(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.pig = WalkingPig()
 
     def _load_image(self, path: str) -> pygame.Surface | None:
@@ -145,3 +147,4 @@ class FlowerField:
         # 順番に描画
         for ground_y, obj_type, obj in render_objects:
             obj.draw(screen, time_sec)
+        self.frame.draw(screen, time_sec)
