@@ -10,6 +10,7 @@ import random
 
 import pygame
 import pygame.gfxdraw
+from gallery.settings import safe_scale
 
 from gallery.animation_helpers import lerp_color
 from gallery.scenery.drifting_cloud import DriftingCloud
@@ -119,8 +120,8 @@ class MeadowBackground:
         hi_size = (rect.width * AA_SCALE, rect.height * AA_SCALE)
         hi = pygame.Surface(hi_size, pygame.SRCALPHA)
         draw_func(hi, AA_SCALE)
-        smoothed = pygame.transform.smoothscale(hi, rect.size)
-        surface.blit(smoothed, rect)
+        smoothed = safe_scale(hi, rect.size)
+        surface.blit(smoothed, rect, special_flags=pygame.BLEND_PREMULTIPLIED)
 
     def _draw_smooth_circle(
         self,
@@ -326,9 +327,9 @@ class MeadowBackground:
                 ((cx + int(ox * scale)) * AA_SCALE, (cy + int(oy * scale)) * AA_SCALE),
                 int(radius * scale * AA_SCALE),
             )
-        crown = pygame.transform.smoothscale(crown_hi, crown_size)
+        crown = safe_scale(crown_hi, crown_size)
         crown.set_alpha(210)
-        surface.blit(crown, (top_x - cx, ground_y - trunk_h - int(crown_size[1] * 0.78)))
+        surface.blit(crown, (top_x - cx, ground_y - trunk_h - int(crown_size[1] * 0.78)), special_flags=pygame.BLEND_PREMULTIPLIED)
 
     def _draw_background_trees(self, surface: pygame.Surface) -> None:
         trees = (

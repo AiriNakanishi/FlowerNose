@@ -44,7 +44,7 @@ class FlowerField:
         if path in self._cached_images:
             return self._cached_images[path]
         try:
-            img = pygame.image.load(path).convert_alpha()
+            img = pygame.image.load(path)
             self._cached_images[path] = img
             return img
         except pygame.error:
