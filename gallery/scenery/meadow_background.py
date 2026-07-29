@@ -208,6 +208,66 @@ class MeadowBackground:
             pygame.draw.aalines(overlay, highlight, False, highlight_points)
         surface.blit(overlay, (0, 0))
 
+    def _draw_meadow_color_grain(self, surface: pygame.Surface, field_top: int) -> None:
+        overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        area_scale = self.width * self.height / (REFERENCE_WIDTH * REFERENCE_HEIGHT)
+        grain_count = min(6200, int(700 * area_scale))
+        colors = (
+            ((184, 210, 112), (226, 236, 150), 0.34),
+            ((78, 138, 94), (64, 116, 92), 0.27),
+            ((44, 96, 48), (30, 70, 42), 0.25),
+            ((130, 170, 78), (164, 196, 96), 0.14),
+        )
+
+        for _ in range(grain_count):
+            y = self.rng.randint(field_top, self.height - 1)
+            depth = (y - field_top) / max(1, self.height - field_top)
+            x = self.rng.randint(-12, self.width + 12)
+            roll = self.rng.random()
+            running = 0.0
+            low_color = colors[-1][0]
+            high_color = colors[-1][1]
+            for color_a, color_b, weight in colors:
+                running += weight
+                if roll <= running:
+                    low_color = color_a
+                    high_color = color_b
+                    break
+
+            color = lerp_color(high_color, low_color, min(1.0, depth * 1.15))
+            if depth > 0.65 and self.rng.random() < 0.32:
+                color = lerp_color(color, self.FIELD_DEEP_SHADOW, 0.28)
+
+            length = int(self.rng.uniform(6, 18 + depth * 26) * self.display_scale)
+            lean = self.rng.uniform(-0.9, 0.9) + math.sin(x * 0.004 + y * 0.009) * 0.45
+            dx = int(lean * length * (0.34 + depth * 0.38))
+            dy = -int(length * self.rng.uniform(0.10, 0.42))
+            alpha = int(12 + depth * 24 + self.rng.random() * 10)
+            if roll < 0.34:
+                alpha = int(alpha * (0.72 + (1.0 - depth) * 0.36))
+            pygame.draw.aaline(overlay, (*color, alpha), (x, y), (x + dx, y + dy))
+
+        pool_count = min(90, int(12 * area_scale))
+        for _ in range(pool_count):
+            depth = self.rng.uniform(0.18, 0.94)
+            cx = self.rng.randint(0, self.width)
+            cy = int(field_top + (self.height - field_top) * depth)
+            width = int(self.rng.uniform(26, 76 + depth * 96) * self.display_scale)
+            height = max(2, int(width * self.rng.uniform(0.10, 0.22)))
+            palette = self.rng.choice(
+                (
+                    (204, 222, 126, 13),
+                    (124, 170, 92, 11),
+                    (38, 86, 54, 15),
+                    (76, 130, 104, 10),
+                )
+            )
+            rect = pygame.Rect(0, 0, width, height)
+            rect.center = (cx, cy)
+            self._draw_smooth_ellipse(overlay, palette, rect)
+
+        surface.blit(overlay, (0, 0))
+
     def _draw_meadow_volume(self, surface: pygame.Surface, field_top: int) -> None:
         depth_overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         for y in range(field_top, self.height):
@@ -487,6 +547,7 @@ class MeadowBackground:
         surface.blit(light_patch, (0, 0))
         surface.blit(shadow_patch, (0, 0))
 
+        self._draw_meadow_color_grain(surface, field_top)
         self._draw_grass_texture(surface, field_top, int(self.height * 0.72), int(76 * self.display_scale))
         self._draw_grass_texture(surface, int(self.height * 0.66), self.height, int(96 * self.display_scale))
         self._draw_grass_clumps(surface, int(self.height * 0.62), int(self.height * 0.76), int(4 * self.display_scale))
