@@ -9,8 +9,9 @@ import config
 
 # --- 保存先・画面 ---
 SAVE_DIR = config.System.SAVE_DIR          # main.py が花 PNG を保存するフォルダ
-WINDOW_WIDTH = config.Sizes.WINDOW_WIDTH
-WINDOW_HEIGHT = config.Sizes.WINDOW_HEIGHT
+WINDOW_WIDTH = 3840
+WINDOW_HEIGHT = 2160
+DISPLAY_SCALE = min(WINDOW_WIDTH / 1280, WINDOW_HEIGHT / 720)
 
 # --- 花畑に咲かせる本数 ---
 MIN_FLOWERS = 10   # 最小本数
@@ -21,8 +22,8 @@ GROUND_Y_MIN = int(WINDOW_HEIGHT * 0.55)   # 奥の列
 GROUND_Y_MAX = int(WINDOW_HEIGHT * 0.88)   # 手前の列
 
 # --- 花の大きさ ---
-FLOWER_SCALE_MIN = 0.12
-FLOWER_SCALE_MAX = 0.35
+FLOWER_SCALE_MIN = 0.12 * DISPLAY_SCALE
+FLOWER_SCALE_MAX = 0.35 * DISPLAY_SCALE
 
 # --- 咲きアニメーション ---
 BLOOM_DURATION_MIN = 1.2   # 1 本が咲き終わる最短秒数

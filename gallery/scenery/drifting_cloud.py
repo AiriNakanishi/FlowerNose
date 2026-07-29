@@ -11,15 +11,18 @@ import pygame
 
 
 AA_SCALE = 3
+REFERENCE_WIDTH = 1280
+REFERENCE_HEIGHT = 720
 
 
 class DriftingCloud:
     """ふわっと流れる雲"""
 
     def __init__(self, width: int, height: int, rng: random.Random):
+        display_scale = min(width / REFERENCE_WIDTH, height / REFERENCE_HEIGHT)
         self.base_y = rng.randint(int(height * 0.06), int(height * 0.28))
-        self.scale = rng.uniform(0.7, 1.4)
-        self.speed = rng.uniform(8, 18)
+        self.scale = rng.uniform(0.7, 1.4) * display_scale
+        self.speed = rng.uniform(8, 18) * display_scale
         self.alpha = rng.randint(150, 210)
         self.x = rng.uniform(-width * 0.2, width * 1.1)
 
