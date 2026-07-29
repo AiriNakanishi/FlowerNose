@@ -1,4 +1,3 @@
-# gallery/scenery/walking_pig.py
 import math
 import random
 import os
@@ -71,11 +70,11 @@ class WalkingPig:
         if not self.image:
             return
         
-        # 歩くときのぴょこぴょこする揺れを計算（サイン波の絶対値で弾むように）
-        bounce = abs(math.sin(time_sec * 8.0)) * 12.0 * self.scale
+        # ゆっくり大きくジャンプする調整（残してあります）
+        bounce = abs(math.sin(time_sec * 3.0)) * 200.0 * self.scale
         
         draw_x = int(self.x)
-        draw_y = int(self.ground_y - bounce)
+        draw_y = int(self.ground_y - bounce + (150 * self.scale))
         
         rect = self.image.get_rect(midbottom=(draw_x, draw_y))
         
@@ -84,7 +83,9 @@ class WalkingPig:
         shadow_h = int(shadow_w * 0.2)
         shadow_surf = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
         pygame.draw.ellipse(shadow_surf, (30, 60, 30, 40), shadow_surf.get_rect())
-        screen.blit(shadow_surf, (draw_x - shadow_w // 2, self.ground_y - shadow_h // 2))
+        
+        # 影はコメントアウトした状態のままにしてあります
+        # screen.blit(shadow_surf, (draw_x - shadow_w // 2, self.ground_y - shadow_h // 2))
 
         # 豚本体の描画
         screen.blit(self.image, rect)

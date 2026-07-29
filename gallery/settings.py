@@ -9,8 +9,10 @@ import config
 
 # --- 保存先・画面 ---
 SAVE_DIR = config.System.SAVE_DIR          # main.py が花 PNG を保存するフォルダ
-WINDOW_WIDTH = 3840
-WINDOW_HEIGHT = 2160
+# WINDOW_WIDTH = 3840
+# WINDOW_HEIGHT = 2160
+WINDOW_WIDTH = 1470
+WINDOW_HEIGHT = 956
 DISPLAY_SCALE = min(WINDOW_WIDTH / 1280, WINDOW_HEIGHT / 720)
 
 # --- 花畑に咲かせる本数 ---
@@ -43,3 +45,5 @@ PIG_SCALE_MIN = 0.15   # 奥にいるときのサイズ
 PIG_SCALE_MAX = 0.3    # 手前にいるときのサイズ
 PIG_SPEED_MIN = 30.0   # 歩く最低スピード
 PIG_SPEED_MAX = 70.0   # 歩く最高スピード
+
+PIG_IMAGE_PATH = "assets/pig.png"
