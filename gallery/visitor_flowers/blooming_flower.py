@@ -77,7 +77,7 @@ class BloomingFlower:
         shadow_h = max(3, int(shadow_w * 0.22))
         alpha = int(55 * min(1.0, progress))
 
-        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA)
+        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA).convert_alpha()
         pygame.draw.ellipse(shadow_hi, (20, 45, 22, alpha), shadow_hi.get_rect())
         shadow = pygame.transform.smoothscale(shadow_hi, (shadow_w, shadow_h))
         screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2))
