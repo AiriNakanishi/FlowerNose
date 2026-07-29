@@ -14,12 +14,16 @@ import config
 REFERENCE_WIDTH = 1280
 REFERENCE_HEIGHT = 720
 AA_SCALE = 3
+TREE_TARGET_WIDTH_RATIO = 0.60
+TREE_MAX_HEIGHT_RATIO = 0.55
+LEFT_TREE_X_INSET_RATIO = 0.16
+RIGHT_TREE_X_INSET_RATIO = 0.08
+TREE_Y_INSET_RATIO = 0.05
 
 
 class GardenFrame:
     """Leafy foreground frame inspired by picture-book meadow illustrations."""
 
-    SKY_GAP_RATIO = 0.58
     GRASS_DARK = (158, 204, 132)
     GRASS_MID = (184, 224, 146)
     GRASS_LIGHT = (220, 240, 172)
@@ -32,6 +36,8 @@ class GardenFrame:
         self.height = height
         self.display_scale = min(width / REFERENCE_WIDTH, height / REFERENCE_HEIGHT)
         self.rng = random.Random(431)
+        self.left_tree = self._load_tree_image("fefttree.png", "lefttree.png")
+        self.right_tree = self._load_tree_image("righttree.png")
         self.static = self._build_static()
 
     def _s(self, value: float) -> int:
@@ -51,6 +57,25 @@ class GardenFrame:
         smooth = pygame.transform.smoothscale(hi, rect.size)
         surface.blit(smooth, rect.topleft)
 
+    def _draw_rotated_petal(
+        self,
+        surface: pygame.Surface,
+        center: tuple[int, int],
+        size: tuple[int, int],
+        angle: float,
+        color: tuple[int, int, int],
+    ) -> None:
+        petal = pygame.Surface((size[0] * 2, size[1] * 2), pygame.SRCALPHA)
+        rect = pygame.Rect(size[0] // 2, size[1] // 2, size[0], size[1])
+        self._draw_smooth_ellipse(petal, (*color, 232), rect)
+        self._draw_smooth_ellipse(
+            petal,
+            (255, 255, 255, 62),
+            (rect.x + size[0] // 5, rect.y + size[1] // 6, max(2, size[0] // 2), max(2, size[1] // 3)),
+        )
+        rotated = pygame.transform.rotozoom(petal, -math.degrees(angle), 1.0)
+        surface.blit(rotated, (center[0] - rotated.get_width() // 2, center[1] - rotated.get_height() // 2))
+
     def _draw_flower(
         self,
         surface: pygame.Surface,
@@ -59,16 +84,20 @@ class GardenFrame:
         radius: int,
         petal_color: tuple[int, int, int],
     ) -> None:
-        for i in range(7):
-            angle = math.tau * i / 7
-            px = x + int(math.cos(angle) * radius * 0.75)
-            py = y + int(math.sin(angle) * radius * 0.75)
-            self._draw_smooth_ellipse(
-                surface,
-                (*petal_color, 230),
-                (px - radius // 2, py - radius // 3, radius, max(2, radius * 2 // 3)),
-            )
-        pygame.draw.circle(surface, (*self.FLOWER_YELLOW, 235), (x, y), max(2, radius // 3))
+        petal_count = 6 if radius < self._s(16) else 8
+        for i in range(petal_count):
+            angle = math.tau * i / petal_count
+            wobble = math.sin(i * 1.7 + radius) * 0.13
+            petal_len = int(radius * (1.08 + 0.12 * math.sin(i * 2.1)))
+            petal_w = max(3, int(radius * (0.58 + 0.08 * math.cos(i * 1.3))))
+            distance = radius * (0.42 + 0.05 * math.cos(i))
+            px = x + int(math.cos(angle + wobble) * distance)
+            py = y + int(math.sin(angle + wobble) * distance)
+            self._draw_rotated_petal(surface, (px, py), (petal_len, petal_w), angle + wobble, petal_color)
+
+        center_r = max(2, int(radius * 0.26))
+        pygame.draw.circle(surface, (*self.FLOWER_YELLOW, 238), (x, y), center_r)
+        pygame.draw.circle(surface, (255, 244, 148, 220), (x - center_r // 3, y - center_r // 3), max(1, center_r // 2))
 
     def _load_tree_image(self, *names: str) -> pygame.Surface | None:
         for name in names:
@@ -80,15 +109,16 @@ class GardenFrame:
     def _draw_tree_image(self, surface: pygame.Surface, image: pygame.Surface | None, side: str) -> None:
         if image is None:
             return
-        target_w = int(self.width * 0.60)
-        max_h = int(self.height * 0.55)
+        target_w = int(self.width * TREE_TARGET_WIDTH_RATIO)
+        max_h = int(self.height * TREE_MAX_HEIGHT_RATIO)
         scale = min(target_w / image.get_width(), max_h / image.get_height())
         size = (max(1, int(image.get_width() * scale)), max(1, int(image.get_height() * scale)))
         tree = pygame.transform.smoothscale(image, size)
-        inset_x = int(tree.get_width() * (0.16 if side == "left" else 0.08))
-        inset_y = int(tree.get_height() * 0.05)
+        x_inset_ratio = LEFT_TREE_X_INSET_RATIO if side == "left" else RIGHT_TREE_X_INSET_RATIO
+        inset_x = int(tree.get_width() * x_inset_ratio)
+        inset_y = int(tree.get_height() * TREE_Y_INSET_RATIO)
         x = -inset_x if side == "left" else self.width - tree.get_width() + inset_x
-        y = -int(tree.get_height() * 0.05) if side == "left" else -inset_y
+        y = -inset_y
         surface.blit(tree, (x, y))
 
     def _draw_bottom_grass(self, surface: pygame.Surface) -> None:
@@ -124,10 +154,10 @@ class GardenFrame:
 
     def _build_static(self) -> pygame.Surface:
         surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-        self._draw_tree_image(surface, self._load_tree_image("fefttree.png", "lefttree.png"), "left")
-        self._draw_tree_image(surface, self._load_tree_image("righttree.png"), "right")
+        self._draw_tree_image(surface, self.left_tree, "left")
+        self._draw_tree_image(surface, self.right_tree, "right")
         self._draw_bottom_grass(surface)
         return surface
 
-    def draw(self, screen: pygame.Surface, time_sec: float) -> None:
+    def draw(self, screen: pygame.Surface, _time_sec: float) -> None:
         screen.blit(self.static, (0, 0))
