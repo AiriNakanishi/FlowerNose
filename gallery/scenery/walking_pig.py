@@ -30,6 +30,8 @@ class WalkingPig:
         self.frame_time = 0.0
         self.direction = -1
         self.wait_timer = 0.0
+        self._image_cache: dict[tuple[int, int, int, int, int], pygame.Surface] = {}
+        self._shadow_cache: dict[tuple[int, int], pygame.Surface] = {}
         self.reset()
 
     def _load_animation_sets(self) -> list[list[pygame.Surface]]:
@@ -84,6 +86,38 @@ class WalkingPig:
         depth = (self.ground_y - GROUND_Y_MIN) / max(1, GROUND_Y_MAX - GROUND_Y_MIN)
         return PIG_SCALE_MIN + (PIG_SCALE_MAX - PIG_SCALE_MIN) * depth
 
+    def _get_scaled_frame(
+        self,
+        frame_index: int,
+        direction: int,
+        width: int,
+        height: int,
+    ) -> pygame.Surface:
+        cache_key = (id(self.frames_original), frame_index, direction, width, height)
+        image = self._image_cache.get(cache_key)
+        if image is not None:
+            return image
+
+        frame = self.frames_original[frame_index]
+        image = pygame.transform.smoothscale(frame, (width, height))
+        if direction == 1:
+            image = pygame.transform.flip(image, True, False)
+        self._image_cache[cache_key] = image
+        return image
+
+    def _get_shadow(self, width: int) -> pygame.Surface:
+        shadow_w = max(1, int(width * 0.55))
+        shadow_h = max(1, int(shadow_w * 0.18))
+        cache_key = (shadow_w, shadow_h)
+        shadow = self._shadow_cache.get(cache_key)
+        if shadow is not None:
+            return shadow
+
+        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
+        pygame.draw.ellipse(shadow, (30, 60, 30, 35), shadow.get_rect())
+        self._shadow_cache[cache_key] = shadow
+        return shadow
+
     def update(self, dt: float) -> None:
         if self.wait_timer > 0:
             self.wait_timer = max(0.0, self.wait_timer - dt)
@@ -118,20 +152,15 @@ class WalkingPig:
         scale = self._current_scale()
         width = max(1, int(frame.get_width() * scale))
         height = max(1, int(frame.get_height() * scale))
-        image = pygame.transform.smoothscale(frame, (width, height))
-
-        # Generated frames face left. Flip when walking to the right.
-        if self.direction == 1:
-            image = pygame.transform.flip(image, True, False)
+        image = self._get_scaled_frame(frame_index, self.direction, width, height)
 
         bob = 0.0 if self.wait_timer > 0 else abs(math.sin(time_sec * 8.0)) * 8.0 * scale
         draw_x = int(self.x)
         draw_y = int(self.ground_y - bob)
 
-        shadow_w = max(1, int(width * 0.55))
-        shadow_h = max(1, int(shadow_w * 0.18))
-        shadow = pygame.Surface((shadow_w, shadow_h), pygame.SRCALPHA)
-        pygame.draw.ellipse(shadow, (30, 60, 30, 35), shadow.get_rect())
+        shadow = self._get_shadow(width)
+        shadow_w = shadow.get_width()
+        shadow_h = shadow.get_height()
         screen.blit(shadow, (draw_x - shadow_w // 2, int(self.ground_y - shadow_h // 2)))
 
         rect = image.get_rect(midbottom=(draw_x, draw_y))

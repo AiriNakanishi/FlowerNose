@@ -5,8 +5,8 @@ import config
 
 # Saved flowers and display size
 SAVE_DIR = config.System.SAVE_DIR
-WINDOW_WIDTH = 1280
-WINDOW_HEIGHT = 720
+WINDOW_WIDTH = 3840
+WINDOW_HEIGHT = 2160
 DISPLAY_SCALE = min(WINDOW_WIDTH / 1280, WINDOW_HEIGHT / 720)
 
 # Flower count
@@ -34,8 +34,8 @@ FPS = 60
 PIG_IMAGE_PATH = os.path.join(config.BASE_DIR, "assets", "pig.png")
 WALKPIG_ASSET_DIR = os.path.join(config.BASE_DIR, "assets", "walkpig")
 PIG_ANIMATION_FPS = 6.0
-PIG_SCALE_MIN = 0.15
-PIG_SCALE_MAX = 0.3
+PIG_SCALE_MIN = 0.22
+PIG_SCALE_MAX = 0.42
 PIG_SPEED_MIN = 30.0
 PIG_SPEED_MAX = 70.0
 PIG_WAIT_MIN = 0.6

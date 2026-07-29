@@ -1,10 +1,3 @@
-"""
-1 本の花の咲きアニメーション
-
-来場者が描いた PNG 1 枚を、地面（ground_y）を根元として
-高さ 0 → 100% に伸ばし、咲き終わったら風で揺らす。
-"""
-
 import math
 import random
 
@@ -18,7 +11,7 @@ AA_SCALE = 3
 
 
 class BloomingFlower:
-    """来場者が描いた 1 枚の花を、地面から咲かせる"""
+    """One saved flower that blooms from the ground and then sways."""
 
     def __init__(
         self,
@@ -35,17 +28,20 @@ class BloomingFlower:
         self.scale = scale
         self.delay = delay
         self.flip_x = flip_x
+        self.src_image = pygame.transform.flip(image, True, False) if flip_x else image
+        self.base_w = max(1, int(self.src_image.get_width() * self.scale))
+        self.base_h = max(1, int(self.src_image.get_height() * self.scale))
+        self._scaled_cache: dict[int, pygame.Surface] = {}
+        self._shadow_cache: dict[tuple[int, int, int], pygame.Surface] = {}
         self.elapsed = 0.0
         self.duration = random.uniform(BLOOM_DURATION_MIN, BLOOM_DURATION_MAX)
 
-        # 咲き終わったあとの風による揺れ
         self.sway_phase = random.uniform(0, math.pi * 2)
         self.sway_speed = random.uniform(0.8, 1.4)
         self.sway_amount = random.uniform(2, 5)
 
     @property
     def progress(self) -> float:
-        """咲き具合 0.0（地面に埋まっている）〜 1.0（咲き終わり）"""
         if self.delay > 0:
             return 0.0
         t = min(1.0, self.elapsed / self.duration)
@@ -69,17 +65,21 @@ class BloomingFlower:
         width: int,
         progress: float,
     ) -> None:
-        """根元の楕円影で、花が地面に立っている感じを出す"""
         if progress < 0.15:
             return
 
         shadow_w = max(8, int(width * 0.55 * min(1.0, progress)))
         shadow_h = max(3, int(shadow_w * 0.22))
         alpha = int(55 * min(1.0, progress))
+        cache_key = (shadow_w, shadow_h, alpha)
 
-        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA).convert_alpha()
-        pygame.draw.ellipse(shadow_hi, (20, 45, 22, alpha), shadow_hi.get_rect())
-        shadow = pygame.transform.smoothscale(shadow_hi, (shadow_w, shadow_h))
+        shadow = self._shadow_cache.get(cache_key)
+        if shadow is None:
+            shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA).convert_alpha()
+            pygame.draw.ellipse(shadow_hi, (20, 45, 22, alpha), shadow_hi.get_rect())
+            shadow = pygame.transform.smoothscale(shadow_hi, (shadow_w, shadow_h))
+            self._shadow_cache[cache_key] = shadow
+
         screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2))
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
@@ -87,16 +87,14 @@ class BloomingFlower:
         if progress <= 0:
             return
 
-        src = pygame.transform.flip(self.image, self.flip_x, False) if self.flip_x else self.image
-        base_w = max(1, int(src.get_width() * self.scale))
-        base_h = max(1, int(src.get_height() * self.scale))
-
-        # 高さだけ伸ばして「地面から生えてくる」表現
         grow = ease_out_cubic(min(1.0, progress * 1.15))
-        draw_h = max(1, int(base_h * grow))
-        draw_w = base_w
+        draw_h = max(1, int(self.base_h * grow))
+        draw_w = self.base_w
 
-        scaled = pygame.transform.smoothscale(src, (draw_w, draw_h))
+        scaled = self._scaled_cache.get(draw_h)
+        if scaled is None:
+            scaled = pygame.transform.smoothscale(self.src_image, (draw_w, draw_h))
+            self._scaled_cache[draw_h] = scaled
 
         sway_x = 0
         if self.is_bloomed:
