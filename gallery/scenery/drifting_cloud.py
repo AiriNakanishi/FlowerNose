@@ -26,7 +26,7 @@ class DriftingCloud:
         # 雲の形は起動時に 1 枚だけ描いてキャッシュ
         blob_w = int(180 * self.scale)
         blob_h = int(70 * self.scale)
-        hi = pygame.Surface((blob_w * AA_SCALE, blob_h * AA_SCALE), pygame.SRCALPHA)
+        hi = pygame.Surface((blob_w * AA_SCALE, blob_h * AA_SCALE), pygame.SRCALPHA).convert_alpha()
         puff_color = (255, 255, 255, self.alpha)
         offsets = [
             (int(blob_w * 0.28), int(blob_h * 0.55), int(34 * self.scale)),
@@ -41,9 +41,9 @@ class DriftingCloud:
                 (cx * AA_SCALE, cy * AA_SCALE),
                 radius * AA_SCALE,
             )
-        self.image = safe_scale(hi, (blob_w, blob_h))
+        self.image = pygame.transform.smoothscale(hi, (blob_w, blob_h))
 
     def draw(self, screen: pygame.Surface, time_sec: float, screen_width: int) -> None:
         x = (self.x + time_sec * self.speed) % (screen_width + self.image.get_width())
         x -= self.image.get_width()
-        screen.blit(self.image, (int(x), self.base_y), special_flags=pygame.BLEND_PREMULTIPLIED)
+        screen.blit(self.image, (int(x), self.base_y))
