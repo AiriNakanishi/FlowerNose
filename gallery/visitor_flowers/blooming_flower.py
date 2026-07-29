@@ -77,10 +77,10 @@ class BloomingFlower:
         shadow_h = max(3, int(shadow_w * 0.22))
         alpha = int(55 * min(1.0, progress))
 
-        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA)
+        shadow_hi = pygame.Surface((shadow_w * AA_SCALE, shadow_h * AA_SCALE), pygame.SRCALPHA).convert_alpha()
         pygame.draw.ellipse(shadow_hi, (20, 45, 22, alpha), shadow_hi.get_rect())
-        shadow = safe_scale(shadow_hi, (shadow_w, shadow_h))
-        screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2), special_flags=pygame.BLEND_PREMULTIPLIED)
+        shadow = pygame.transform.smoothscale(shadow_hi, (shadow_w, shadow_h))
+        screen.blit(shadow, (x - shadow_w // 2, ground_y - shadow_h // 2 + 2))
 
     def draw(self, screen: pygame.Surface, time_sec: float) -> None:
         progress = self.progress
@@ -96,7 +96,7 @@ class BloomingFlower:
         draw_h = max(1, int(base_h * grow))
         draw_w = base_w
 
-        scaled = safe_scale(src, (draw_w, draw_h))
+        scaled = pygame.transform.smoothscale(src, (draw_w, draw_h))
 
         sway_x = 0
         if self.is_bloomed:
@@ -106,4 +106,4 @@ class BloomingFlower:
         self._draw_ground_shadow(screen, draw_x, self.ground_y, draw_w, progress)
 
         rect = scaled.get_rect(midbottom=(draw_x, self.ground_y))
-        screen.blit(scaled, rect, special_flags=pygame.BLEND_PREMULTIPLIED)
+        screen.blit(scaled, rect)

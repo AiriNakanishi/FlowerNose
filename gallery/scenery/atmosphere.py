@@ -57,4 +57,4 @@ class AtmosphereParticles:
 
             surf = pygame.Surface((size * 2 + 2, size * 2 + 2), pygame.SRCALPHA)
             pygame.draw.circle(surf, color, (size + 1, size + 1), size)
-            screen.blit(surf, (x - size, y - size), special_flags=pygame.BLEND_PREMULTIPLIED)
+            screen.blit(surf, (x - size, y - size))
