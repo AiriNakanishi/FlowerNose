@@ -9,13 +9,13 @@
 """
 
 import random
-
 import pygame
 
 from gallery.scenery.atmosphere import AtmosphereParticles
 from gallery.frame_decor import GardenFrame
 from gallery.scenery.meadow_background import MeadowBackground
 from gallery.settings import (
+    ATMOSPHERE_PARTICLES,
     BLOOM_STAGGER_MAX,
     FLOWER_SCALE_MAX,
     FLOWER_SCALE_MIN,
@@ -38,7 +38,7 @@ class FlowerField:
         self.known_files: set[str] = set()
         self._cached_images: dict[str, pygame.Surface] = {}
         self.background = MeadowBackground(WINDOW_WIDTH, WINDOW_HEIGHT)
-        self.atmosphere = AtmosphereParticles(WINDOW_WIDTH, WINDOW_HEIGHT)
+        self.atmosphere = AtmosphereParticles(WINDOW_WIDTH, WINDOW_HEIGHT, ATMOSPHERE_PARTICLES)
         self.frame = GardenFrame(WINDOW_WIDTH, WINDOW_HEIGHT)
         self.pig = WalkingPig()
 
@@ -47,6 +47,9 @@ class FlowerField:
             return self._cached_images[path]
         try:
             img = pygame.image.load(path).convert_alpha()
+            bounds = img.get_bounding_rect(1)
+            if bounds.width > 0 and bounds.height > 0:
+                img = img.subsurface(bounds).copy()
             self._cached_images[path] = img
             return img
         except pygame.error:
