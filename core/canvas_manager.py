@@ -135,6 +135,22 @@ class CanvasManager:
         start_x = 20
         start_y = self.height - box_size - 20
 
+        # --- ここから白い背景を追加 ---
+        padding = 10  # 白い背景の余白（パレットの周りにどれくらい白枠を広げるか）
+        # パレット全体の横幅を計算
+        total_width = (box_size * len(self.palette)) + (margin * (len(self.palette) - 1))
+        
+        # 背景の座標とサイズ
+        bg_x = start_x - padding
+        bg_y = start_y - padding
+        bg_w = total_width + (padding * 2)
+        bg_h = box_size + (padding * 2)
+        
+        # 白い背景を描画 (255, 255, 255 は白色)
+        # 最後の border_radius=10 で角を丸くして柔らかい印象にしています
+        pygame.draw.rect(screen, (255, 255, 255), (bg_x, bg_y, bg_w, bg_h), border_radius=10)
+        # --- 追加ここまで ---
+
         for i, color in enumerate(self.palette):
             x = start_x + i * (box_size + margin)
             pygame.draw.rect(screen, color, (x, start_y, box_size, box_size))

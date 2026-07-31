@@ -75,6 +75,9 @@ def main():
                     canvas.change_color("left")
                 elif event.key in (pygame.K_d, pygame.K_RIGHT):
                     canvas.change_color("right")
+                elif event.key == pygame.K_c:
+                    print("キャンバスをクリアしました")
+                    canvas.clear_canvas()
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
