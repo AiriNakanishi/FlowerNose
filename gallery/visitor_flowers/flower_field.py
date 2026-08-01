@@ -22,7 +22,6 @@ from gallery.settings import (
     GROUND_Y_MAX,
     GROUND_Y_MIN,
     MAX_FLOWERS,
-    MIN_FLOWERS,
     WINDOW_HEIGHT,
     WINDOW_WIDTH,
 )
@@ -89,7 +88,6 @@ class FlowerField:
     def _trim_to_max(self) -> None:
         if len(self.flowers) <= MAX_FLOWERS:
             return
-        self.flowers.sort(key=lambda f: f.ground_y)
         self.flowers = self.flowers[-MAX_FLOWERS:]
 
     def populate(self, paths: list[str]) -> None:
@@ -98,15 +96,13 @@ class FlowerField:
             self.flowers.clear()
             return
 
-        count = random.randint(MIN_FLOWERS, MAX_FLOWERS)
         self.flowers = []
-        for _ in range(count):
-            img = self._pick_image(paths)
+        for path in paths[-MAX_FLOWERS:]:
+            img = self._load_image(path)
             if img:
                 self.flowers.append(self._make_flower(img, stagger=True))
 
         # 奥から手前の順に描画
-        self.flowers.sort(key=lambda f: f.ground_y)
         self.known_files = set(paths)
 
     def add_new_flowers(self, paths: list[str]) -> None:
@@ -122,7 +118,6 @@ class FlowerField:
             self.flowers[-1].delay = random.uniform(0.2, 1.0)
 
         self._trim_to_max()
-        self.flowers.sort(key=lambda f: f.ground_y)
 
     def update(self, dt: float) -> None:
         for flower in self.flowers:

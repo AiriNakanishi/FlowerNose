@@ -17,18 +17,34 @@ import pygame
 
 from gallery import hot_reload
 from gallery.saved_flower_loader import list_flower_images
-from gallery.settings import FOLDER_CHECK_INTERVAL, FPS, SAVE_DIR, WINDOW_HEIGHT, WINDOW_WIDTH
+from gallery.settings import (
+    FOLDER_CHECK_INTERVAL,
+    FPS,
+    GALLERY_DISPLAY_INDEX,
+    SAVE_DIR,
+    WINDOW_HEIGHT,
+    WINDOW_WIDTH,
+)
 from gallery.visitor_flowers import FlowerField
 
 # コード変更の監視間隔（秒）
 CODE_WATCH_INTERVAL = 0.5
 
 
+def open_gallery_display(flags: int = 0) -> pygame.Surface:
+    display_count = pygame.display.get_num_displays()
+    display_index = GALLERY_DISPLAY_INDEX
+    if display_index >= display_count:
+        print(f"Display {display_index + 1} was not found. Using display 1 instead.")
+        display_index = 0
+    return pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), flags, display=display_index)
+
+
 def main() -> None:
     os.makedirs(SAVE_DIR, exist_ok=True)
 
     pygame.init()
-    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+    screen = open_gallery_display()
     pygame.display.set_caption("Flower Nose - 花畑")
     clock = pygame.time.Clock()
 
@@ -60,7 +76,7 @@ def main() -> None:
                 elif event.key == pygame.K_f:
                     is_fullscreen = not is_fullscreen
                     flags = pygame.FULLSCREEN if is_fullscreen else 0
-                    screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT), flags)
+                    screen = open_gallery_display(flags)
                 elif event.key == pygame.K_r:
                     # コードも読み直してから花畑を作り直す
                     try:

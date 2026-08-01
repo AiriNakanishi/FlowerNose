@@ -9,8 +9,9 @@ import config
 
 # --- 保存先・画面 ---
 SAVE_DIR = config.System.SAVE_DIR          # main.py が花 PNG を保存するフォルダ
-WINDOW_WIDTH = 1200
-WINDOW_HEIGHT = 800
+WINDOW_WIDTH = 3840
+WINDOW_HEIGHT = 2160
+GALLERY_DISPLAY_INDEX = 1
 DISPLAY_SCALE = min(WINDOW_WIDTH / 1280, WINDOW_HEIGHT / 720)
 
 # --- 花畑に咲かせる本数 ---
@@ -30,6 +31,9 @@ BLOOM_DURATION_MIN = 1.2   # 1 本が咲き終わる最短秒数
 BLOOM_DURATION_MAX = 2.4   # 1 本が咲き終わる最長秒数
 BLOOM_STAGGER_MAX = 4.0    # 起動時、花ごとの咲き始め時間差（最大秒）
 
+# --- 背景の光の粒 ---
+ATMOSPHERE_PARTICLES = int(18 * DISPLAY_SCALE)
+
 # --- 実行 ---
 FOLDER_CHECK_INTERVAL = 2.0  # 新しい花 PNG を何秒ごとにチェックするか
 FPS = 60
@@ -39,7 +43,19 @@ import os
 import config
 
 PIG_IMAGE_PATH = os.path.join(config.BASE_DIR, "assets", "pig.png")
-PIG_SCALE_MIN = 0.15   # 奥にいるときのサイズ
-PIG_SCALE_MAX = 0.3    # 手前にいるときのサイズ
+PIG_SCALE_MIN = 0.30   # 奥にいるときのサイズ
+PIG_SCALE_MAX = 0.60   # 手前にいるときのサイズ
 PIG_SPEED_MIN = 30.0   # 歩く最低スピード
 PIG_SPEED_MAX = 70.0   # 歩く最高スピード
+WALKPIG_ASSET_DIR = os.path.join(config.BASE_DIR, "assets", "walkpig")
+PIG_ANIMATION_FPS = 7.0
+PIG_WAIT_MIN = 0.8
+PIG_WAIT_MAX = 2.2
+PIG_JUMP_DURATION = 0.55
+PIG_JUMP_HEIGHT = 110.0
+PIG_SIT_DURATION_MIN = 1.2
+PIG_SIT_DURATION_MAX = 2.8
+PIG_SIT_CHANCE = 0.45
+PIG_JUMP_CHANCE = 0.25
+PIG_SPONTANEOUS_ACTION_MIN = 4.0
+PIG_SPONTANEOUS_ACTION_MAX = 9.0
