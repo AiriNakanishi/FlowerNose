@@ -28,11 +28,11 @@ class System:
     SAVE_DIR = os.path.join(BASE_DIR, "FlowerNose_Gallery")
     MODEL_PATH = os.path.join(BASE_DIR, "assets", "face_landmarker.task")
     CAMERA_INDEX = 0
+    MAIN_DISPLAY_INDEX = 2
     
 class Gestures:
     # NOD_THRESHOLD = 0.04
-    NOD_THRESHOLD = 0.03
-    # NOD_STILLNESS_THRESHOLD = 0.015 
+    NOD_THRESHOLD = 0.04    # NOD_STILLNESS_THRESHOLD = 0.015 
     NOD_STILLNESS_THRESHOLD = 0.015
     NOD_COOLDOWN = 15
     
@@ -40,7 +40,7 @@ class Gestures:
     WINK_COOLDOWN = 15     
 
     # SHAKE_MIN_MOVEMENT = 0.015 
-    SHAKE_MIN_MOVEMENT = 0.008
+    SHAKE_MIN_MOVEMENT = 0.015
     SHAKE_TIMEOUT = 15
     SHAKE_REQUIRED_SWITCHES = 2
     SHAKE_COOLDOWN = 30

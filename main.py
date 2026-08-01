@@ -25,6 +25,15 @@ def initialize_camera():
     sys.exit()
 
 
+def open_main_display(size, flags=0):
+    display_count = pygame.display.get_num_displays()
+    display_index = config.System.MAIN_DISPLAY_INDEX
+    if display_index >= display_count:
+        print(f"Display {display_index + 1} was not found. Using display 1 instead.")
+        display_index = 0
+    return pygame.display.set_mode(size, flags, display=display_index)
+
+
 def main():
     pygame.init()
     cap = initialize_camera()
@@ -38,7 +47,7 @@ def main():
 
     h, w, _ = frame.shape
 
-    screen = pygame.display.set_mode((w, h))
+    screen = open_main_display((w, h))
     pygame.display.set_caption("Flower Nose - AR Experience")
     clock = pygame.time.Clock()
 
@@ -62,10 +71,8 @@ def main():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_f:
                     is_fullscreen = not is_fullscreen
-                    if is_fullscreen:
-                        screen = pygame.display.set_mode((w, h), pygame.FULLSCREEN)
-                    else:
-                        screen = pygame.display.set_mode((w, h))
+                    flags = pygame.FULLSCREEN if is_fullscreen else 0
+                    screen = open_main_display((w, h), flags)
                 elif event.key in (pygame.K_w, pygame.K_RETURN, pygame.K_UP):
                     print("Saving drawing from keyboard...")
                     canvas.save_image()
