@@ -7,6 +7,15 @@ from core.canvas_manager import CanvasManager
 from core.face_tracker import FaceTracker
 
 
+INSTRUCTION_LINES = [
+    ("鼻でお花を描こう", True),
+    ("", False),
+    ("うなずく：保存", False),
+    ("首を横に振る：ひとつ戻す", False),
+    ("ウィンク：色を変える", False),
+]
+
+
 def initialize_camera():
     index = config.System.CAMERA_INDEX
     print(f"Opening iVCam camera: index {index}")
@@ -34,6 +43,44 @@ def open_main_display(size, flags=0):
     return pygame.display.set_mode(size, flags, display=display_index)
 
 
+def get_japanese_font(size, bold=False):
+    for name in ("yugothic", "meiryo", "msgothic", "notosanscjk"):
+        path = pygame.font.match_font(name, bold=bold)
+        if path:
+            return pygame.font.Font(path, size)
+    return pygame.font.Font(None, size)
+
+
+def build_instruction_panel(width, height):
+    scale = min(width / 1280, height / 720)
+    padding = int(22 * scale)
+    gap = int(8 * scale)
+    title_font = get_japanese_font(max(26, int(34 * scale)), bold=True)
+    body_font = get_japanese_font(max(22, int(28 * scale)))
+
+    rendered_lines = []
+    for text, is_title in INSTRUCTION_LINES:
+        font = title_font if is_title else body_font
+        if text:
+            rendered = font.render(text, True, (35, 35, 35))
+        else:
+            rendered = pygame.Surface((1, max(10, int(14 * scale))), pygame.SRCALPHA)
+        rendered_lines.append(rendered)
+
+    panel_width = max(line.get_width() for line in rendered_lines) + padding * 2
+    panel_height = sum(line.get_height() for line in rendered_lines) + gap * (len(rendered_lines) - 1) + padding * 2
+    panel = pygame.Surface((panel_width, panel_height), pygame.SRCALPHA)
+    panel.fill((255, 255, 255, 218))
+    pygame.draw.rect(panel, (255, 150, 185, 230), panel.get_rect(), max(2, int(3 * scale)))
+
+    y = padding
+    for line in rendered_lines:
+        panel.blit(line, (padding, y))
+        y += line.get_height() + gap
+
+    return panel
+
+
 def main():
     pygame.init()
     cap = initialize_camera()
@@ -53,6 +100,7 @@ def main():
 
     tracker = FaceTracker()
     canvas = CanvasManager(w, h)
+    instruction_panel = build_instruction_panel(w, h)
 
     prev_nose_pos = None
     is_fullscreen = False
@@ -116,6 +164,7 @@ def main():
 
         screen.blit(canvas.get_surface(), (0, 0))
         canvas.draw_palette(screen)
+        screen.blit(instruction_panel, (24, 24))
 
         pygame.display.flip()
         clock.tick(config.Sizes.FPS)
