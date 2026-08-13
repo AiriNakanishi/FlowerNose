@@ -1,3 +1,4 @@
+# Use Python 3.11. See .python-version and README.md.
 mediapipe==1.0.0
 opencv-python==5.0.0.93
 pygame==2.6.1
