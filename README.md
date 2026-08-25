@@ -101,7 +101,7 @@ python gallery.py
 
 ## ギャラリー画面
 
-`gallery.py` は `FlowerNose_Gallery/` を定期的に確認し、新しく保存された花を画面に追加します。
+`gallery.py` は `FlowerNose_Gallery/` を約0.25秒ごとに確認します。画像の追加・削除・差し替えは、自動でギャラリー画面へ反映されます。
 
 ギャラリー画面のキー操作:
 

@@ -35,7 +35,7 @@ BLOOM_STAGGER_MAX = 4.0    # 起動時、花ごとの咲き始め時間差（最
 ATMOSPHERE_PARTICLES = int(18 * DISPLAY_SCALE)
 
 # --- 実行 ---
-FOLDER_CHECK_INTERVAL = 2.0  # 新しい花 PNG を何秒ごとにチェックするか
+FOLDER_CHECK_INTERVAL = 0.25  # 花 PNG の追加・削除・更新を確認する間隔
 FPS = 60
 
 # --- 豚のアニメーション ---

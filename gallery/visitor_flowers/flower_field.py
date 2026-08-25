@@ -51,7 +51,7 @@ class FlowerField:
                 img = img.subsurface(bounds).copy()
             self._cached_images[path] = img
             return img
-        except pygame.error:
+        except (pygame.error, OSError):
             print(f"画像読み込みエラー: {path}")
             return None
 
@@ -64,6 +64,7 @@ class FlowerField:
     def _make_flower(
         self,
         image: pygame.Surface,
+        source_path: str,
         stagger: bool = True,
         immediate: bool = False,
     ) -> BloomingFlower:
@@ -78,6 +79,7 @@ class FlowerField:
         delay = 0.0 if immediate else random.uniform(0, BLOOM_STAGGER_MAX)
         return BloomingFlower(
             image=image,
+            source_path=source_path,
             x=x,
             ground_y=ground_y,
             scale=scale,
@@ -94,30 +96,57 @@ class FlowerField:
         """起動時 or R キー: 10〜30 本をランダム配置して時間差で咲かせる"""
         if not paths:
             self.flowers.clear()
+            self.known_files.clear()
+            self._cached_images.clear()
             return
 
         self.flowers = []
         for path in paths[-MAX_FLOWERS:]:
             img = self._load_image(path)
             if img:
-                self.flowers.append(self._make_flower(img, stagger=True))
+                self.flowers.append(self._make_flower(img, path, stagger=True))
 
         # 奥から手前の順に描画
         self.known_files = set(paths)
 
-    def add_new_flowers(self, paths: list[str]) -> None:
-        """新しく保存された花だけを追加で咲かせる"""
-        new_paths = [p for p in paths if p not in self.known_files]
-        self.known_files = set(paths)
+    def sync_files(
+        self,
+        paths: list[str],
+        modified_paths: set[str] | None = None,
+    ) -> None:
+        """保存フォルダーとの差分を、表示中の花へ反映する。"""
+        current_files = set(paths)
+        modified_paths = modified_paths or set()
+        desired_paths = paths[-MAX_FLOWERS:]
+        desired_files = set(desired_paths)
+        invalid_cache_paths = (self.known_files - current_files) | modified_paths
 
+        self.flowers = [
+            flower
+            for flower in self.flowers
+            if flower.source_path in desired_files
+            and flower.source_path not in modified_paths
+        ]
+        for path in invalid_cache_paths:
+            self._cached_images.pop(path, None)
+
+        displayed_paths = {flower.source_path for flower in self.flowers}
+        new_paths = [p for p in desired_paths if p not in displayed_paths]
         for path in new_paths:
             img = self._load_image(path)
             if img is None:
                 continue
-            self.flowers.append(self._make_flower(img, stagger=False, immediate=False))
+            self.flowers.append(
+                self._make_flower(img, path, stagger=False, immediate=False)
+            )
             self.flowers[-1].delay = random.uniform(0.2, 1.0)
 
+        self.known_files = current_files
         self._trim_to_max()
+
+    def add_new_flowers(self, paths: list[str]) -> None:
+        """後方互換用。保存フォルダーとの差分を反映する。"""
+        self.sync_files(paths)
 
     def update(self, dt: float) -> None:
         for flower in self.flowers:

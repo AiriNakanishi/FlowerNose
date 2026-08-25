@@ -14,7 +14,18 @@ from gallery.settings import SAVE_DIR
 
 def list_flower_images() -> list[str]:
     """FlowerNose_Gallery 内の PNG を更新日時順（古い順）で取得"""
+    return list(snapshot_flower_images())
+
+
+def snapshot_flower_images() -> dict[str, tuple[int, int]]:
+    """PNGごとの更新時刻とサイズを、更新日時順で取得する。"""
     pattern = os.path.join(SAVE_DIR, "*.png")
-    files = glob.glob(pattern)
-    files.sort(key=os.path.getmtime)
-    return files
+    snapshots = []
+    for path in glob.glob(pattern):
+        try:
+            stat = os.stat(path)
+        except OSError:
+            continue
+        snapshots.append((path, (stat.st_mtime_ns, stat.st_size)))
+    snapshots.sort(key=lambda item: (item[1][0], item[0]))
+    return dict(snapshots)

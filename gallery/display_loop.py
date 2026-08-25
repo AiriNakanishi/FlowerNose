@@ -16,7 +16,7 @@ import time
 import pygame
 
 from gallery import hot_reload
-from gallery.saved_flower_loader import list_flower_images
+from gallery.saved_flower_loader import snapshot_flower_images
 from gallery.settings import (
     FOLDER_CHECK_INTERVAL,
     FPS,
@@ -49,7 +49,8 @@ def main() -> None:
     clock = pygame.time.Clock()
 
     field = FlowerField()
-    paths = list_flower_images()
+    folder_snapshot = snapshot_flower_images()
+    paths = list(folder_snapshot)
     field.populate(paths)
 
     last_check = 0.0
@@ -102,11 +103,15 @@ def main() -> None:
 
         if now - last_check >= FOLDER_CHECK_INTERVAL:
             last_check = now
-            paths = list_flower_images()
-            if not field.flowers and paths:
-                field.populate(paths)
-            else:
-                field.add_new_flowers(paths)
+            current_snapshot = snapshot_flower_images()
+            paths = list(current_snapshot)
+            modified_paths = {
+                path
+                for path in current_snapshot.keys() & folder_snapshot.keys()
+                if current_snapshot[path] != folder_snapshot[path]
+            }
+            field.sync_files(paths, modified_paths)
+            folder_snapshot = current_snapshot
 
         field.update(dt)
         field.draw_background(screen, elapsed)

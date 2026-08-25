@@ -16,6 +16,7 @@ class BloomingFlower:
     def __init__(
         self,
         image: pygame.Surface,
+        source_path: str,
         x: int,
         ground_y: int,
         scale: float,
@@ -23,6 +24,7 @@ class BloomingFlower:
         flip_x: bool = False,
     ):
         self.image = image
+        self.source_path = source_path
         self.x = x
         self.ground_y = ground_y
         self.scale = scale
