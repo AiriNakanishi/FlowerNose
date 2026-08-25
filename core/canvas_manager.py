@@ -11,6 +11,7 @@ class CanvasManager:
         self.width = width
         self.height = height
         self.drawing_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        self.preview_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
 
         self.strokes = []
         self.current_stroke = None
@@ -51,6 +52,77 @@ class CanvasManager:
             points.append((int(x), int(y)))
         return points
 
+    def _draw_curve(self, surface, color, p0, p1, p2, p3):
+        p_curve = self.get_catmull_rom_points(p0, p1, p2, p3)
+        for start, end in zip(p_curve, p_curve[1:]):
+            pygame.draw.line(
+                surface,
+                color,
+                start,
+                end,
+                config.Sizes.PEN_THICKNESS,
+            )
+            pygame.draw.circle(
+                surface,
+                color,
+                start,
+                config.Sizes.PEN_THICKNESS // 2,
+            )
+
+    def _draw_segment(self, surface, segment):
+        points = segment["points"]
+        color = segment["color"]
+
+        if len(points) < 2:
+            for point in points:
+                pygame.draw.circle(
+                    surface,
+                    color,
+                    point,
+                    config.Sizes.PEN_THICKNESS // 2,
+                )
+            return
+
+        padded_points = [points[0]] + points + [points[-1]]
+        for i in range(len(padded_points) - 3):
+            self._draw_curve(
+                surface,
+                color,
+                padded_points[i],
+                padded_points[i + 1],
+                padded_points[i + 2],
+                padded_points[i + 3],
+            )
+
+    def _update_preview(self):
+        self.preview_surface.fill(config.Colors.TRANSPARENT)
+        if self.current_segment is None:
+            return
+
+        points = self.current_segment["points"]
+        color = self.current_segment["color"]
+        if len(points) == 1:
+            pygame.draw.circle(
+                self.preview_surface,
+                color,
+                points[0],
+                config.Sizes.PEN_THICKNESS // 2,
+            )
+        elif len(points) >= 2:
+            p0 = points[-3] if len(points) >= 3 else points[-2]
+            self._draw_curve(
+                self.preview_surface,
+                color,
+                p0,
+                points[-2],
+                points[-1],
+                points[-1],
+            )
+
+    def _commit_preview(self):
+        self.drawing_surface.blit(self.preview_surface, (0, 0))
+        self.preview_surface.fill(config.Colors.TRANSPARENT)
+
     def change_color(self, direction):
         if direction == "left":
             self.current_color_index = (self.current_color_index - 1) % len(self.palette)
@@ -62,12 +134,14 @@ class CanvasManager:
             and self.current_segment is not None
             and len(self.current_segment["points"]) > 0
         ):
+            self._commit_preview()
             last_point = self.current_segment["points"][-1]
             self.current_segment = {
                 "color": self.palette[self.current_color_index],
                 "points": [last_point],
             }
             self.current_stroke.append(self.current_segment)
+            self._update_preview()
 
     def add_point(self, pos):
         if self.current_stroke is None:
@@ -80,54 +154,42 @@ class CanvasManager:
         else:
             self.current_segment["points"].append(pos)
 
+        points = self.current_segment["points"]
+        if len(points) >= 3:
+            p0 = points[-4] if len(points) >= 4 else points[-3]
+            self._draw_curve(
+                self.drawing_surface,
+                self.current_segment["color"],
+                p0,
+                points[-3],
+                points[-2],
+                points[-1],
+            )
+        self._update_preview()
+
     def end_stroke(self):
+        if self.current_stroke is not None:
+            self._commit_preview()
         self.current_stroke = None
         self.current_segment = None
 
     def undo(self):
         if len(self.strokes) > 0:
             self.strokes.pop()
-            self.end_stroke()
+            self.current_stroke = None
+            self.current_segment = None
+            self.redraw()
 
     def redraw(self):
         self.drawing_surface.fill(config.Colors.TRANSPARENT)
+        self.preview_surface.fill(config.Colors.TRANSPARENT)
         for stroke in self.strokes:
             for segment in stroke:
-                points = segment["points"]
-                color = segment["color"]
+                self._draw_segment(self.drawing_surface, segment)
 
-                if len(points) < 2:
-                    for pt in points:
-                        pygame.draw.circle(
-                            self.drawing_surface,
-                            color,
-                            pt,
-                            config.Sizes.PEN_THICKNESS // 2,
-                        )
-                    continue
-
-                padded_points = [points[0]] + points + [points[-1]]
-                for i in range(len(padded_points) - 3):
-                    p_curve = self.get_catmull_rom_points(
-                        padded_points[i],
-                        padded_points[i + 1],
-                        padded_points[i + 2],
-                        padded_points[i + 3],
-                    )
-                    for j in range(len(p_curve) - 1):
-                        pygame.draw.line(
-                            self.drawing_surface,
-                            color,
-                            p_curve[j],
-                            p_curve[j + 1],
-                            config.Sizes.PEN_THICKNESS,
-                        )
-                        pygame.draw.circle(
-                            self.drawing_surface,
-                            color,
-                            p_curve[j],
-                            config.Sizes.PEN_THICKNESS // 2,
-                        )
+    def draw(self, screen):
+        screen.blit(self.drawing_surface, (0, 0))
+        screen.blit(self.preview_surface, (0, 0))
 
     def draw_palette(self, screen):
         box_size = 40
@@ -168,6 +230,15 @@ class CanvasManager:
         self.strokes = []
         self.current_stroke = None
         self.current_segment = None
+        self.drawing_surface.fill(config.Colors.TRANSPARENT)
+        self.preview_surface.fill(config.Colors.TRANSPARENT)
+
+    def has_drawing(self):
+        return any(
+            segment["points"]
+            for stroke in self.strokes
+            for segment in stroke
+        )
 
     def save_image(self):
         self.redraw()
@@ -181,5 +252,6 @@ class CanvasManager:
         self.clear_canvas()
 
     def get_surface(self):
-        self.redraw()
-        return self.drawing_surface
+        surface = self.drawing_surface.copy()
+        surface.blit(self.preview_surface, (0, 0))
+        return surface

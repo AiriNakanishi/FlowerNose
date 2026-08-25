@@ -1,5 +1,3 @@
-from collections import deque
-
 import mediapipe as mp
 
 import config
@@ -7,9 +5,6 @@ import config
 
 class PlayerState:
     def __init__(self):
-        self.y_history = deque(maxlen=30)
-        self.x_history = deque(maxlen=30)
-        self.nod_cooldown = 0
         self.wink_cooldown = 0
 
         self.last_x = None
@@ -19,8 +14,6 @@ class PlayerState:
         self.shake_cooldown = 0
 
     def update_cooldowns(self):
-        if self.nod_cooldown > 0:
-            self.nod_cooldown -= 1
         if self.wink_cooldown > 0:
             self.wink_cooldown -= 1
         if self.shake_cooldown > 0:
@@ -33,8 +26,6 @@ class PlayerState:
                 self.current_direction = 0
 
     def reset(self):
-        self.y_history.clear()
-        self.x_history.clear()
         self.last_x = None
         self.switch_count = 0
         self.current_direction = 0
@@ -60,7 +51,12 @@ class FaceTracker:
         detection_result = self.landmarker.detect(mp_image)
 
         self.state.update_cooldowns()
-        output = {"pos": None, "nodding": False, "shaking": False, "wink": None}
+        output = {
+            "pos": None,
+            "face_detected": False,
+            "shaking": False,
+            "wink": None,
+        }
 
         if not detection_result.face_landmarks:
             self.state.reset()
@@ -73,35 +69,7 @@ class FaceTracker:
         cx = int(nose_tip.x * width)
         cy = int(nose_tip.y * height)
         output["pos"] = (cx, cy)
-
-        st.y_history.append(nose_tip.y)
-        st.x_history.append(nose_tip.x)
-
-        if len(st.y_history) == 30 and st.nod_cooldown == 0:
-            y_list = list(st.y_history)
-            x_list = list(st.x_history)
-            past_y = y_list[5:20]
-            recent_y = y_list[20:30]
-            recent_x = x_list[20:30]
-
-            is_still = (
-                max(recent_y) - min(recent_y) < config.Gestures.NOD_STILLNESS_THRESHOLD
-                and max(recent_x) - min(recent_x) < config.Gestures.NOD_STILLNESS_THRESHOLD
-            )
-
-            start_y = past_y[0]
-            lowest_y = max(past_y)
-            end_y = past_y[-1]
-            is_fast_nod = (
-                lowest_y - start_y > config.Gestures.NOD_THRESHOLD
-                and lowest_y - end_y > config.Gestures.NOD_THRESHOLD
-            )
-
-            if is_still and is_fast_nod:
-                output["nodding"] = True
-                st.nod_cooldown = config.Gestures.NOD_COOLDOWN
-                st.y_history.clear()
-                st.x_history.clear()
+        output["face_detected"] = True
 
         if st.shake_cooldown == 0:
             if st.last_x is not None:

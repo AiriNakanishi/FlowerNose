@@ -1,6 +1,7 @@
 import cv2
 import pygame
 import sys
+import time
 
 import config
 from core.canvas_manager import CanvasManager
@@ -10,10 +11,39 @@ from core.face_tracker import FaceTracker
 INSTRUCTION_LINES = [
     ("鼻でお花を描こう", True),
     ("", False),
-    ("うなずく：保存", False),
+    ("顔を手で3秒隠す：保存", False),
     ("首を横に振る：ひとつ戻す", False),
     ("ウィンク：色を変える", False),
 ]
+
+
+class FaceHideSaveTimer:
+    def __init__(self, duration):
+        self.duration = duration
+        self.hidden_since = None
+        self.save_latched = False
+
+    def update(self, face_detected, has_drawing, now):
+        if face_detected:
+            was_counting = self.hidden_since is not None
+            self.hidden_since = None
+            self.save_latched = False
+            return "canceled" if was_counting else None
+
+        if self.save_latched or not has_drawing:
+            self.hidden_since = None
+            return None
+
+        if self.hidden_since is None:
+            self.hidden_since = now
+            return "started"
+
+        if now - self.hidden_since >= self.duration:
+            self.hidden_since = None
+            self.save_latched = True
+            return "save"
+
+        return None
 
 
 def initialize_camera():
@@ -104,6 +134,7 @@ def main():
 
     prev_nose_pos = None
     is_fullscreen = False
+    face_hide_timer = FaceHideSaveTimer(config.Gestures.FACE_HIDE_SAVE_SECONDS)
 
     while cap.isOpened():
         success, image = cap.read()
@@ -140,8 +171,17 @@ def main():
 
         player_data = tracker.get_nose_position(image_rgb, w, h)
 
-        if player_data["nodding"]:
-            print("Nod detected. Saving drawing...")
+        hide_action = face_hide_timer.update(
+            player_data["face_detected"],
+            canvas.has_drawing(),
+            time.monotonic(),
+        )
+        if hide_action == "started":
+            print("Face hidden. Keep it covered for 3 seconds to save...")
+        elif hide_action == "canceled":
+            print("Face detected again. Save canceled.")
+        elif hide_action == "save":
+            print("Face hidden for 3 seconds. Saving drawing...")
             canvas.save_image()
 
         if player_data["shaking"]:
@@ -162,7 +202,7 @@ def main():
         if prev_nose_pos:
             pygame.draw.circle(screen, config.Colors.GUIDE_RED, prev_nose_pos, 10)
 
-        screen.blit(canvas.get_surface(), (0, 0))
+        canvas.draw(screen)
         canvas.draw_palette(screen)
         screen.blit(instruction_panel, (24, 24))
 

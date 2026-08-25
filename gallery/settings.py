@@ -11,7 +11,7 @@ import config
 SAVE_DIR = config.System.SAVE_DIR          # main.py が花 PNG を保存するフォルダ
 WINDOW_WIDTH = 3840
 WINDOW_HEIGHT = 2160
-GALLERY_DISPLAY_INDEX = 1
+GALLERY_DISPLAY_INDEX = 2
 DISPLAY_SCALE = min(WINDOW_WIDTH / 1280, WINDOW_HEIGHT / 720)
 
 # --- 花畑に咲かせる本数 ---
