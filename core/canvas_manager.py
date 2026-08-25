@@ -233,6 +233,43 @@ class CanvasManager:
         self.drawing_surface.fill(config.Colors.TRANSPARENT)
         self.preview_surface.fill(config.Colors.TRANSPARENT)
 
+    def point_count(self):
+        return sum(
+            len(segment["points"])
+            for stroke in self.strokes
+            for segment in stroke
+        )
+
+    def truncate_to_point_count(self, point_count):
+        point_count = max(0, point_count)
+        if point_count >= self.point_count():
+            return False
+
+        remaining = point_count
+        kept_strokes = []
+        for stroke in self.strokes:
+            kept_segments = []
+            for segment in stroke:
+                if remaining <= 0:
+                    break
+                kept_points = segment["points"][:remaining]
+                remaining -= len(kept_points)
+                if kept_points:
+                    kept_segments.append({
+                        "color": segment["color"],
+                        "points": kept_points,
+                    })
+            if kept_segments:
+                kept_strokes.append(kept_segments)
+            if remaining <= 0:
+                break
+
+        self.strokes = kept_strokes
+        self.current_stroke = None
+        self.current_segment = None
+        self.redraw()
+        return True
+
     def has_drawing(self):
         return any(
             segment["points"]

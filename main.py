@@ -5,6 +5,7 @@ import time
 
 import config
 from core.canvas_manager import CanvasManager
+from core.drawing_guard import FaceExitDrawingGuard
 from core.face_tracker import FaceTracker
 
 
@@ -130,9 +131,17 @@ def main():
 
     tracker = FaceTracker()
     canvas = CanvasManager(w, h)
+    exit_drawing_guard = FaceExitDrawingGuard(
+        w,
+        h,
+        config.Gestures.FACE_EXIT_HISTORY_SECONDS,
+        config.Gestures.FACE_EXIT_MIN_DISTANCE,
+    )
     instruction_panel = build_instruction_panel(w, h)
 
     prev_nose_pos = None
+    face_lost_since = None
+    pending_exit_rollback = None
     is_fullscreen = False
     face_hide_timer = FaceHideSaveTimer(config.Gestures.FACE_HIDE_SAVE_SECONDS)
 
@@ -155,26 +164,30 @@ def main():
                 elif event.key in (pygame.K_w, pygame.K_RETURN, pygame.K_UP):
                     print("Saving drawing from keyboard...")
                     canvas.save_image()
+                    exit_drawing_guard.clear()
                 elif event.key in (pygame.K_z, pygame.K_BACKSPACE, pygame.K_DELETE, pygame.K_DOWN):
                     canvas.undo()
+                    exit_drawing_guard.clear()
                 elif event.key in (pygame.K_a, pygame.K_LEFT):
                     canvas.change_color("left")
                 elif event.key in (pygame.K_d, pygame.K_RIGHT):
                     canvas.change_color("right")
-                elif event.key == pygame.K_c:
+                elif event.key in (pygame.K_c, pygame.K_ESCAPE):
                     print("キャンバスをクリアしました")
                     canvas.clear_canvas()
+                    exit_drawing_guard.clear()
 
         image = cv2.flip(image, 1)
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         frame_surface = pygame.surfarray.make_surface(image_rgb.swapaxes(0, 1))
 
         player_data = tracker.get_nose_position(image_rgb, w, h)
+        now = time.monotonic()
 
         hide_action = face_hide_timer.update(
             player_data["face_detected"],
             canvas.has_drawing(),
-            time.monotonic(),
+            now,
         )
         if hide_action == "started":
             print("Face hidden. Keep it covered for 3 seconds to save...")
@@ -183,17 +196,39 @@ def main():
         elif hide_action == "save":
             print("Face hidden for 3 seconds. Saving drawing...")
             canvas.save_image()
+            exit_drawing_guard.clear()
 
         if player_data["shaking"]:
             canvas.undo()
+            exit_drawing_guard.clear()
 
         if player_data["wink"]:
             canvas.change_color(player_data["wink"])
 
         if player_data["pos"]:
+            face_lost_since = None
+            pending_exit_rollback = None
+            exit_drawing_guard.record(
+                now,
+                player_data["pos"],
+                canvas.point_count(),
+            )
             canvas.add_point(player_data["pos"])
             prev_nose_pos = player_data["pos"]
         else:
+            if prev_nose_pos is not None:
+                face_lost_since = now
+                pending_exit_rollback = exit_drawing_guard.rollback_point_count()
+            if (
+                pending_exit_rollback is not None
+                and face_lost_since is not None
+                and now - face_lost_since
+                >= config.Gestures.FACE_EXIT_CONFIRM_SECONDS
+            ):
+                if canvas.truncate_to_point_count(pending_exit_rollback):
+                    print("Removed the drawing trail made while leaving the screen.")
+                pending_exit_rollback = None
+            exit_drawing_guard.clear()
             canvas.end_stroke()
             prev_nose_pos = None
 

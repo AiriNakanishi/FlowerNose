@@ -11,6 +11,8 @@ class PlayerState:
         self.wink_candidate = None
         self.wink_hold_frames = 0
         self.wink_latched = False
+        self.wink_armed = False
+        self.wink_neutral_frames = 0
         self.left_eye_open_baseline = None
         self.right_eye_open_baseline = None
 
@@ -35,6 +37,11 @@ class PlayerState:
     def reset(self):
         self.wink_candidate = None
         self.wink_hold_frames = 0
+        self.wink_latched = False
+        self.wink_armed = False
+        self.wink_neutral_frames = 0
+        self.left_eye_open_baseline = None
+        self.right_eye_open_baseline = None
         self.last_x = None
         self.switch_count = 0
         self.current_direction = 0
@@ -78,23 +85,6 @@ class PlayerState:
         if self.right_eye_open_baseline and right_eye_openness is not None:
             right_open_ratio = right_eye_openness / self.right_eye_open_baseline
 
-        if self.wink_latched:
-            scores_released = (
-                left_blink_score is not None
-                and right_blink_score is not None
-                and max(left_blink_score, right_blink_score)
-                <= config.Gestures.WINK_RELEASE_SCORE
-            )
-            geometry_released = (
-                left_open_ratio is not None
-                and right_open_ratio is not None
-                and min(left_open_ratio, right_open_ratio)
-                >= config.Gestures.WINK_OTHER_EYE_MIN_RATIO
-            )
-            if scores_released or geometry_released:
-                self.wink_latched = False
-            return None
-
         blendshape_candidate = None
         if left_blink_score is not None and right_blink_score is not None and (
             left_blink_score >= config.Gestures.WINK_CLOSED_SCORE
@@ -129,6 +119,33 @@ class PlayerState:
             blendshape_candidate,
             geometry_candidate,
         )
+        eyes_are_neutral = (
+            blendshape_candidate is None
+            and geometry_candidate is None
+        )
+
+        # 同じ閉眼状態で色変更を繰り返さない。顔検出直後も、通常の開眼状態が
+        # 数フレーム続いてからウィンク判定を有効にする。
+        if self.wink_latched:
+            if eyes_are_neutral:
+                self.wink_neutral_frames += 1
+                if self.wink_neutral_frames >= config.Gestures.WINK_RELEASE_FRAMES:
+                    self.wink_latched = False
+                    self.wink_armed = True
+                    self.wink_neutral_frames = 0
+            else:
+                self.wink_neutral_frames = 0
+            return None
+
+        if not self.wink_armed:
+            if eyes_are_neutral:
+                self.wink_neutral_frames += 1
+                if self.wink_neutral_frames >= config.Gestures.WINK_ARM_FRAMES:
+                    self.wink_armed = True
+                    self.wink_neutral_frames = 0
+            else:
+                self.wink_neutral_frames = 0
+            return None
 
         if candidate is None:
             self.wink_candidate = None
@@ -148,6 +165,8 @@ class PlayerState:
             self.wink_candidate = None
             self.wink_hold_frames = 0
             self.wink_latched = True
+            self.wink_armed = False
+            self.wink_neutral_frames = 0
             self.wink_cooldown = config.Gestures.WINK_COOLDOWN
             return candidate
 
