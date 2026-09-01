@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 import unittest
 
+import pygame
+
 from gallery.visitor_flowers.flower_field import FlowerField
 
 
@@ -66,6 +68,20 @@ class FlowerFieldSyncTests(unittest.TestCase):
         self.assertNotIn(paths[-1], displayed)
         self.assertIn(paths[0], displayed)
         self.assertEqual(len(displayed), 30)
+
+    def test_saved_image_orientation_is_preserved(self):
+        field = FlowerField.__new__(FlowerField)
+        image = pygame.Surface((10, 10), pygame.SRCALPHA)
+
+        flower = field._make_flower(
+            image,
+            "flower.png",
+            stagger=False,
+            immediate=True,
+        )
+
+        self.assertFalse(flower.flip_x)
+        self.assertIs(flower.src_image, image)
 
 
 if __name__ == "__main__":

@@ -84,7 +84,7 @@ class FlowerField:
             ground_y=ground_y,
             scale=scale,
             delay=delay,
-            flip_x=random.choice([True, False]),
+            flip_x=False,
         )
 
     def _trim_to_max(self) -> None:
